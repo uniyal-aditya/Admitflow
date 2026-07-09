@@ -1,7 +1,0 @@
-{
-  "/api/notifications/route": "app/api/notifications/route.js",
-  "/api/auth/me/route": "app/api/auth/me/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/colleges/page": "app/colleges/page.js",
-  "/colleges/[id]/page": "app/colleges/[id]/page.js"
-}
