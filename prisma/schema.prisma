@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  googleId  String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites    Favorite[]
+  downloads    Download[]
+  suggestions  Suggestion[]
+  notifications Notification[]
+  settings     UserSettings?
+}
+
+model UserSettings {
+  id                  String @id @default(cuid())
+  userId              String @unique
+  notificationTypes   String @default("admission,registration,counselling,spot_round,vacant_seat,merit_list")
+  scanFrequency       Int    @default(6)
+  language            String @default("en")
+  emailNotifications  Boolean @default(false)
+  deviceNotifications Boolean @default(false)
+  pixelTheme          Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Favorite {
+  id        String @id @default(cuid())
+  userId    String
+  collegeId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collegeId])
+}
+
+model Download {
+  id           String @id @default(cuid())
+  userId       String
+  noticeId     String
+  noticeTitle  String
+  collegeName  String
+  downloadedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  title       String
+  collegeName String
+  message     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  noticeId    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Suggestion {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String
+  location    String
+  district    String
+  website     String
+  status      String   @default("pending")
+  suggestedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
