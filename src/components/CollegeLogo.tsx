@@ -30,15 +30,6 @@ const logoColors: Record<string, string> = {
   "upes": "#059669",
 };
 
-function getInitials(name: string): string {
-  return name
-    .replace(/[-/]/g, " ")
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w.charAt(0).toUpperCase())
-    .join("");
-}
-
 export function CollegeLogo({
   collegeId,
   name,
@@ -49,35 +40,16 @@ export function CollegeLogo({
   size?: "sm" | "md" | "lg";
 }) {
   const bg = logoColors[collegeId] || "#4f46e5";
-  const dims = { sm: 48, md: 64, lg: 80 };
-  const px = dims[size];
-  const initials = getInitials(name);
-  const fontSize = size === "sm" ? 16 : size === "lg" ? 28 : 22;
+  const letter = name.charAt(0).toUpperCase();
+  const dimClass = size === "sm" ? "h-10 w-10 text-sm" : size === "lg" ? "h-20 w-20 text-2xl" : "h-16 w-16 text-xl";
 
   return (
-    <svg
-      width={px}
-      height={px}
-      viewBox={`0 0 ${px} ${px}`}
-      className={`shrink-0 rounded-2xl ${
-        size === "sm" ? "h-10 w-10" : size === "lg" ? "h-20 w-20" : "h-16 w-16"
-      }`}
+    <div
+      className={`flex shrink-0 items-center justify-center rounded-2xl font-bold text-white ${dimClass}`}
+      style={{ backgroundColor: bg }}
       aria-label={name}
-      role="img"
     >
-      <rect width={px} height={px} rx={px * 0.25} fill={bg} />
-      <text
-        x="50%"
-        y="50%"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill="#ffffff"
-        fontSize={fontSize}
-        fontWeight="bold"
-        fontFamily="system-ui, sans-serif"
-      >
-        {initials}
-      </text>
-    </svg>
+      {letter}
+    </div>
   );
 }
