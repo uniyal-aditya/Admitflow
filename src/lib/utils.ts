@@ -134,26 +134,25 @@ export function getComputedStatus(notice: { publishedDate: string; lastDate?: st
 }
 
 export function computeTimeline(timeline: {
+  currentStage?: string;
   stages: { stage: string; label: string; date?: string; status: string; description?: string }[];
 }) {
   const now = new Date();
-  let foundCurrent = false;
 
   const stages = timeline.stages.map((s) => {
-    if (!s.date) return { ...s, status: (foundCurrent ? "upcoming" : "current") as "completed" | "current" | "upcoming", stage: s.stage as TimelineStage };
+    let status = s.status as "completed" | "current" | "upcoming";
 
-    const stageDate = new Date(s.date);
-    if (stageDate < now) {
-      return { ...s, status: "completed" as const, stage: s.stage as TimelineStage };
+    if (s.date && s.status !== "current") {
+      const stageDate = new Date(s.date);
+      if (stageDate < now && status !== "completed") {
+        status = "completed";
+      }
     }
-    if (!foundCurrent) {
-      foundCurrent = true;
-      return { ...s, status: "current" as const, stage: s.stage as TimelineStage };
-    }
-    return { ...s, status: "upcoming" as const, stage: s.stage as TimelineStage };
+
+    return { ...s, status, stage: s.stage as TimelineStage };
   });
 
-  const currentStage = (stages.find((s) => s.status === "current")?.stage ?? stages[stages.length - 1]?.stage ?? "closed") as TimelineStage;
+  const currentStage = (timeline.currentStage || stages.find((s) => s.status === "current")?.stage || stages[stages.length - 1]?.stage || "closed") as TimelineStage;
 
   return { currentStage, stages };
 }
