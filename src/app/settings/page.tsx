@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   Bell, Moon, Sun, Globe, Heart, Clock,
-  RefreshCw, Info, Mail, Smartphone, User,
+  RefreshCw, Info, Mail, Smartphone,
 } from "lucide-react";
-import Link from "next/link";
 import { useTheme } from "next-themes";
 import { getSettings, setSettings, getFavorites, getDownloads, getNotifications } from "@/lib/store";
 import { UserSettings, NoticeType } from "@/types";
@@ -138,24 +137,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          Account
-        </h2>
-        <Link href="/profile">
-          <div className="rounded-xl border bg-white p-5 hover:bg-gray-50 transition-colors dark:bg-gray-900 dark:border-gray-800 dark:hover:bg-gray-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Profile</p>
-                <p className="text-sm text-gray-500">Edit name and change password</p>
-              </div>
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-        </Link>
       </section>
 
       <section className="space-y-4">
