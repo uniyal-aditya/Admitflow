@@ -3,7 +3,7 @@
 import {
   GraduationCap, Heart, Sparkles,
   Shield, BookOpen, Users, Target, Star,
-  Globe, ExternalLink, Linkedin, User,
+  Globe, ExternalLink, Linkedin, User, Github,
 } from "lucide-react";
 
 const values = [
@@ -126,6 +126,27 @@ export default function AboutPage() {
       </section>
 
 
+
+      <section className="rounded-2xl border bg-white p-8 dark:bg-gray-900 dark:border-gray-800">
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-bold mb-2">Connect with AdmitFlow</h2>
+          <p className="text-sm text-gray-500 mb-4">Star us on GitHub — it helps more students discover the project</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="https://github.com/uniyal-aditya/Admitflow"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Github className="h-5 w-5" />
+              Star on GitHub
+              <span className="inline-flex items-center gap-1 rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">
+                <Star className="h-3 w-3 fill-current" />
+              </span>
+            </a>
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-2xl border bg-white p-8 dark:bg-gray-900 dark:border-gray-800">
         <div className="flex flex-col sm:flex-row items-start gap-6">
