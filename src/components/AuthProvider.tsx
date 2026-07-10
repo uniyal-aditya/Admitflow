@@ -11,22 +11,18 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string }>;
-  signup: (email: string, password: string, name?: string) => Promise<{ error?: string }>;
   googleLogin: (credential: string) => Promise<{ error?: string }>;
-  sendOtp: (phone: string) => Promise<{ error?: string }>;
-  verifyOtp: (phone: string, otp: string) => Promise<{ error?: string }>;
+  sendEmailOtp: (email: string) => Promise<{ error?: string }>;
+  verifyEmailOtp: (email: string, otp: string) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: async () => ({}),
-  signup: async () => ({}),
-  googleLogin: async (_credential: string) => ({}),
-  sendOtp: async (_phone: string) => ({ error: "Not ready" }),
-  verifyOtp: async (_phone: string, _otp: string) => ({ error: "Not ready" }),
+  googleLogin: async () => ({}),
+  sendEmailOtp: async () => ({ error: "Not ready" }),
+  verifyEmailOtp: async () => ({ error: "Not ready" }),
   logout: async () => {},
 });
 
@@ -51,34 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUser(data.user);
-      return {};
-    }
-    return { error: data.error };
-  }, []);
-
-  const signup = useCallback(async (email: string, password: string, name?: string) => {
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUser(data.user);
-      return {};
-    }
-    return { error: data.error };
-  }, []);
-
   const googleLogin = useCallback(async (credential: string) => {
     const res = await fetch("/api/auth/google", {
       method: "POST",
@@ -93,22 +61,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: data.error };
   }, []);
 
-  const sendOtp = useCallback(async (phone: string) => {
-    const res = await fetch("/api/auth/send-otp", {
+  const sendEmailOtp = useCallback(async (email: string) => {
+    const res = await fetch("/api/auth/send-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ email }),
     });
     const data = await res.json();
     if (res.ok) return {};
     return { error: data.error };
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, otp: string) => {
-    const res = await fetch("/api/auth/verify-otp", {
+  const verifyEmailOtp = useCallback(async (email: string, otp: string) => {
+    const res = await fetch("/api/auth/verify-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, otp }),
+      body: JSON.stringify({ email, otp }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -124,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, sendOtp, verifyOtp, logout }}>
+    <AuthContext.Provider value={{ user, loading, googleLogin, sendEmailOtp, verifyEmailOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );
