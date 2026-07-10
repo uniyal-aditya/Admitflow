@@ -21,6 +21,8 @@ export const metadata: Metadata = {
   ],
 };
 
+import { LayoutShell } from "@/components/LayoutShell";
+
 export default function RootLayout({
   children,
 }: {
@@ -32,15 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
           <NotificationProvider>
-          <div className="min-h-screen flex flex-col">
-            <Navbar />
-            <div className="flex flex-1">
-              <Sidebar />
-              <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto pb-20 animate-fade-in">
-                {children}
-              </main>
-            </div>
-          </div>
+          <LayoutShell>{children}</LayoutShell>
           <ChatBot />
         </NotificationProvider>
         </AuthProvider>

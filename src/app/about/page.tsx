@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import {
-  GraduationCap, Github, Heart, ArrowRight, Sparkles,
-  Globe, Shield, BookOpen, Users, Target, Star,
+  GraduationCap, Heart, Sparkles,
+  Shield, BookOpen, Users, Target, Star,
 } from "lucide-react";
 
 const values = [
@@ -19,8 +18,8 @@ const values = [
   },
   {
     icon: Shield,
-    title: "Open Source & Free",
-    desc: "AdmitFlow is completely open source and free for everyone. No ads, no tracking, no hidden costs. Just a tool built for students.",
+    title: "Zero Cost, Forever",
+    desc: "AdmitFlow is completely free for everyone. No ads, no tracking, no hidden costs. Just a tool built for students.",
   },
   {
     icon: Users,
@@ -117,34 +116,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="text-center">
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-8 md:p-12 text-white">
-          <GraduationCap className="mx-auto h-12 w-12 mb-4 opacity-80" />
-          <h2 className="text-2xl md:text-3xl font-bold">Open Source</h2>
-          <p className="mt-3 max-w-xl mx-auto opacity-80">
-            AdmitFlow is open source under the MIT license. Contribute, report issues, or download
-            your own copy from GitHub.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href="https://github.com/AdmitFlow/admitflow"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-gray-100 transition-colors"
-            >
-              <Github className="h-5 w-5" />
-              View on GitHub
-            </a>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-            >
-              Go to Dashboard
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
+
 
       <section className="text-center pb-8">
         <h2 className="text-xl font-bold mb-2">Built for Students</h2>

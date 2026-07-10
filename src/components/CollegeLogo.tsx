@@ -1,8 +1,3 @@
-"use client";
-
-import Image from "next/image";
-import { useState } from "react";
-
 const logoColors: Record<string, string> = {
   "doon-university": "#4f46e5",
   uktech: "#059669",
@@ -35,26 +30,6 @@ const logoColors: Record<string, string> = {
   upes: "#059669",
 };
 
-const logosAvailable: Set<string> = new Set([
-  "aiims-rishikesh",
-  "bfit",
-  "devbhoomi-uk",
-  "dit-university",
-  "doon-university",
-  "gbpiet",
-  "geu",
-  "govt-degree-college-haldwani",
-  "icfai-dehradun",
-  "quantum-university",
-  "srhu",
-  "tulas-institute",
-  "uktech",
-  "uou-haldwani",
-  "upes",
-  "uuhf-bharsar",
-  "wit-dehradun",
-]);
-
 export function CollegeLogo({
   collegeId,
   name,
@@ -64,26 +39,9 @@ export function CollegeLogo({
   name: string;
   size?: "sm" | "md" | "lg";
 }) {
-  const [imgError, setImgError] = useState(false);
   const bg = logoColors[collegeId] || "#4f46e5";
   const letter = name.charAt(0).toUpperCase();
   const dimClass = size === "sm" ? "h-10 w-10 text-sm" : size === "lg" ? "h-20 w-20 text-2xl" : "h-16 w-16 text-xl";
-  const imgSize = size === "sm" ? 40 : size === "lg" ? 80 : 64;
-
-  if (!imgError && logosAvailable.has(collegeId)) {
-    return (
-      <div className={`relative shrink-0 overflow-hidden rounded-2xl ${dimClass}`} style={{ backgroundColor: bg }}>
-        <Image
-          src={`/logos/${collegeId}.png`}
-          alt={name}
-          fill
-          className="object-contain p-1"
-          sizes={imgSize + "px"}
-          onError={() => setImgError(true)}
-        />
-      </div>
-    );
-  }
 
   return (
     <div
