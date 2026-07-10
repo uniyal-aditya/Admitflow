@@ -16,6 +16,7 @@ async function sendEmailOtp(email: string, otp: string) {
   const smtpPass = process.env.SMTP_PASS;
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = parseInt(process.env.SMTP_PORT || "587");
+  const smtpFrom = process.env.SMTP_FROM || smtpUser;
 
   if (smtpUser && smtpPass) {
     const transporter = nodemailer.createTransport({
@@ -25,7 +26,7 @@ async function sendEmailOtp(email: string, otp: string) {
       auth: { user: smtpUser, pass: smtpPass },
     });
     await transporter.sendMail({
-      from: `"AdmitFlow" <${smtpUser}>`,
+      from: `"AdmitFlow" <${smtpFrom}>`,
       to: email,
       subject: "Your AdmitFlow login code",
       text: `Your OTP is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, you can ignore this email.`,
