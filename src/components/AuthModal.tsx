@@ -37,28 +37,34 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
   }, [user, router, onClose]);
 
   useEffect(() => {
-    if (!open || gInit.current) return;
-    if (mode !== "login" && mode !== "signup") return;
+    if (!open) { gInit.current = false; return; }
+    if (mode !== "login" && mode !== "signup") { gInit.current = false; return; }
+    if (gInit.current) return;
     gInit.current = true;
-    if (document.querySelector("script[src*='accounts.google.com/gsi/client']")) {
+    const renderGoogle = () => {
       if (window.google && gRef.current) {
-        window.google.accounts.id.initialize({ client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "", callback: (r) => gcRef.current?.(r.credential) });
-        try { window.google.accounts.id.renderButton(gRef.current, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: "380" }); } catch {}
+        try {
+          window.google.accounts.id.initialize({ client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "", callback: (r) => gcRef.current?.(r.credential) });
+          window.google.accounts.id.renderButton(gRef.current, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: "380" });
+        } catch {}
       }
+    };
+    if (document.querySelector("script[src*='accounts.google.com/gsi/client']")) {
+      renderGoogle();
       return;
     }
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
-    s.onload = () => {
-      if (window.google && gRef.current) {
-        window.google.accounts.id.initialize({ client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "", callback: (r) => gcRef.current?.(r.credential) });
-        window.google.accounts.id.renderButton(gRef.current, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: "380" });
-      }
-    };
+    s.onload = renderGoogle;
     document.body.appendChild(s);
   }, [open, mode]);
 
-  useEffect(() => { if (!open) { setMode("login"); setError(""); setEmail(""); setPassword(""); setName(""); setOtpValue(""); setNewPassword(""); } }, [open]);
+  useEffect(() => {
+    if (!open) {
+      setMode("login"); setError(""); setEmail(""); setPassword(""); setName(""); setOtpValue(""); setNewPassword("");
+      gInit.current = false;
+    }
+  }, [open]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setError("");
