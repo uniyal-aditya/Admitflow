@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
           userSubs.push({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth });
         }
       }
-      if (channels?.email !== false && user.email && user.settings?.emailNotifications) {
+      if (channels?.email !== false && user.email) {
         emailRecipients.push({ email: user.email, name: user.name });
       }
     }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Send, Bell, Mail, Smartphone } from "lucide-react";
+import { Loader2, Send, Bell, Mail, Smartphone, Users } from "lucide-react";
 
 const noticeTypes = ["admission", "registration", "counselling", "spot_round", "vacant_seat", "merit_list", "waiting_list", "fee_payment", "reporting", "extension", "general"];
 
@@ -12,6 +12,7 @@ export default function NotificationsPage() {
   const [result, setResult] = useState<{ notified: number; pushSent: number; emailsSent: number; totalUsers: number } | null>(null);
   const [error, setError] = useState("");
 
+  const [userStats, setUserStats] = useState({ total: 0, push: 0, email: 0 });
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("general");
@@ -19,6 +20,21 @@ export default function NotificationsPage() {
   const [url, setUrl] = useState("");
   const [pushChannel, setPushChannel] = useState(true);
   const [emailChannel, setEmailChannel] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/users")
+      .then((r) => r.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data)) {
+          setUserStats({
+            total: data.length,
+            push: data.filter((u) => u._count?.pushSubscriptions > 0).length,
+            email: data.filter((u) => u.settings?.emailNotifications).length,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -71,6 +87,24 @@ export default function NotificationsPage() {
           <p>Notified: {result.notified} users | Push sent: {result.pushSent} | Emails sent: {result.emailsSent} (of {result.totalUsers} total users)</p>
         </div>
       )}
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-lg border bg-white p-4 text-center dark:bg-gray-900 dark:border-gray-800">
+          <Users className="h-5 w-5 mx-auto text-gray-400 mb-1" />
+          <p className="text-lg font-bold">{userStats.total}</p>
+          <p className="text-xs text-gray-500">Total Users</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4 text-center dark:bg-gray-900 dark:border-gray-800">
+          <Smartphone className="h-5 w-5 mx-auto text-indigo-400 mb-1" />
+          <p className="text-lg font-bold">{userStats.push}</p>
+          <p className="text-xs text-gray-500">Push Subscribed</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4 text-center dark:bg-gray-900 dark:border-gray-800">
+          <Mail className="h-5 w-5 mx-auto text-amber-400 mb-1" />
+          <p className="text-lg font-bold">{userStats.email}</p>
+          <p className="text-xs text-gray-500">Email Enabled</p>
+        </div>
+      </div>
 
       <form onSubmit={handleSend} className="rounded-xl border bg-white p-6 space-y-5 dark:bg-gray-900 dark:border-gray-800">
         <div>
