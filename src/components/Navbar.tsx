@@ -51,12 +51,14 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-1">
           {user ? (
             <div className="flex items-center gap-2 px-3 py-1.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-                {(user.name || user.email).charAt(0).toUpperCase()}
-              </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400 max-w-[120px] truncate">
-                {user.name || user.email.split("@")[0]}
-              </span>
+              <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                  {(user.name || user.email).charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400 max-w-[120px] truncate">
+                  {user.name || user.email.split("@")[0]}
+                </span>
+              </Link>
               <button
                 onClick={logout}
                 className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1"

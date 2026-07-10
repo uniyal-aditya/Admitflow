@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { setSessionCookie } from "@/lib/auth";
 
@@ -9,7 +10,7 @@ function hashOtp(otp: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, otp } = await req.json();
+    const { email, otp, name, password } = await req.json();
 
     if (!email || !otp) {
       return NextResponse.json({ error: "Email and OTP required" }, { status: 400 });
@@ -34,7 +35,11 @@ export async function POST(req: NextRequest) {
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       user = await prisma.user.create({
-        data: { email, name: email.split("@")[0] },
+        data: {
+          email,
+          name: name || email.split("@")[0],
+          password: password ? await bcrypt.hash(password, 12) : undefined,
+        },
       });
     }
 

@@ -79,7 +79,6 @@ export interface UserSettings {
   email?: string;
   emailNotifications: boolean;
   deviceNotifications: boolean;
-  pixelTheme: boolean;
 }
 
 export interface DownloadRecord {

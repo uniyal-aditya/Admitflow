@@ -21,7 +21,6 @@ const defaultSettings: UserSettings = {
   email: "",
   emailNotifications: false,
   deviceNotifications: false,
-  pixelTheme: false,
 };
 
 // Favorites

@@ -22,7 +22,7 @@ function buildSystemPrompt(): string {
   const collegeList = colleges.map((c) => {
     const tl = collegeTimelines[c.id];
     const currentStage = tl?.stages.find((s) => s.status === "current" || s.status === "completed");
-    return `• ${c.shortName} — ${c.location} (${c.type}, ${c.ownership}) — ${c.courses.length} programs — Website: ${c.website}${currentStage ? ` — Current: ${currentStage.label}` : ""}`;
+    return `\u2022 ${c.shortName} \u2014 ${c.location} (${c.type}, ${c.ownership}) \u2014 ${c.courses.length} programs \u2014 Website: ${c.website}${currentStage ? ` \u2014 Current: ${currentStage.label}` : ""}`;
   });
 
   return `You are AdmitFlow AI, a helpful assistant for Uttarakhand college admissions. Answer concisely and accurately using the data below.
@@ -33,13 +33,13 @@ ${collegeList.join("\n")}
 ## Active Notices (${activeNotices.length})
 ${activeNotices.slice(0, 15).map((n) => {
   const c = colleges.find((cl) => cl.id === n.collegeId);
-  return `• ${n.title} — ${c?.shortName || n.collegeId} (${n.type}) — Deadline: ${n.lastDate || "N/A"}`;
+  return `\u2022 ${n.title} \u2014 ${c?.shortName || n.collegeId} (${n.type}) \u2014 Deadline: ${n.lastDate || "N/A"}`;
 }).join("\n")}
 
 ## Upcoming Deadlines
 ${deadlines.slice(0, 10).map((n) => {
   const c = colleges.find((cl) => cl.id === n.collegeId);
-  return `• ${n.title} — ${c?.shortName || n.collegeId} — Due: ${n.lastDate}`;
+  return `\u2022 ${n.title} \u2014 ${c?.shortName || n.collegeId} \u2014 Due: ${n.lastDate}`;
 }).join("\n")}
 
 ## Government Colleges: ${govt.length} | Private/Deemed: ${priv.length}
@@ -80,11 +80,12 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error("Chat error:", err);
     const status = err.status || 500;
+    const detail = err.message || err.statusText || "unknown";
     const msg = status === 401
       ? "Invalid API key. Contact the server administrator."
       : status === 429
         ? "Rate limited. Try again in a moment."
-        : `AI service error (${status}). Check server configuration.`;
+        : `AI service error (${status}): ${detail}`;
     return Response.json({ message: msg }, { status: 200 });
   }
 }

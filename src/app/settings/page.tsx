@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from "react";
 import {
-  Settings,   Bell, Moon, Sun, Globe, Download,
-  Heart, Clock, RefreshCw, Trash2, Info, Gamepad2, Mail,
-  Smartphone,
+  Bell, Moon, Sun, Globe, Heart, Clock,
+  RefreshCw, Info, Mail, Smartphone, User,
 } from "lucide-react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { getSettings, setSettings, getFavorites, getDownloads, getNotifications } from "@/lib/store";
 import { UserSettings, NoticeType } from "@/types";
 import { noticeTypeLabel } from "@/lib/utils";
-import { usePixel } from "@/components/PixelProvider";
 import { useNotification } from "@/components/NotificationProvider";
 
 const allNoticeTypes: NoticeType[] = [
@@ -21,7 +20,6 @@ const allNoticeTypes: NoticeType[] = [
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { pixelMode, togglePixel } = usePixel();
   const [mounted, setMounted] = useState(false);
   const [settings, setLocalSettings] = useState<UserSettings>(getSettings());
   const { isSubscribed, swReady, subscribe, unsubscribe } = useNotification();
@@ -144,29 +142,20 @@ export default function SettingsPage() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Gamepad2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          Pixel Theme
+          <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          Account
         </h2>
-        <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Retro Pixel Mode</p>
-              <p className="text-sm text-gray-500">Turn on the 8-bit pixel aesthetic</p>
+        <Link href="/profile">
+          <div className="rounded-xl border bg-white p-5 hover:bg-gray-50 transition-colors dark:bg-gray-900 dark:border-gray-800 dark:hover:bg-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Profile</p>
+                <p className="text-sm text-gray-500">Edit name and change password</p>
+              </div>
+              <User className="h-5 w-5 text-gray-400" />
             </div>
-            <button
-              onClick={togglePixel}
-              className={`relative h-7 w-12 rounded-full transition-colors ${
-                pixelMode ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                  pixelMode ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
           </div>
-        </div>
+        </Link>
       </section>
 
       <section className="space-y-4">
