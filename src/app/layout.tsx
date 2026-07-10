@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 };
 
 import { LayoutShell } from "@/components/LayoutShell";
+import { RegistrationPopup } from "@/components/RegistrationPopup";
 
 export default function RootLayout({
   children,
@@ -37,6 +38,7 @@ export default function RootLayout({
           <NotificationProvider>
           <LayoutShell>{children}</LayoutShell>
           <ChatBot />
+          <RegistrationPopup />
         </NotificationProvider>
         </AuthProvider>
         </ThemeProvider>

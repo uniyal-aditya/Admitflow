@@ -161,6 +161,17 @@ model Notice {
   @@index([status])
 }
 
+model Visitor {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String?
+  phone          String?
+  referralSource String?
+  isPwaUser      Boolean  @default(false)
+  userAgent      String?
+  createdAt      DateTime @default(now())
+}
+
 model Suggestion {
   id          String   @id @default(cuid())
   userId      String
