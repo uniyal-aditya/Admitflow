@@ -98,6 +98,69 @@ model PushSubscription {
   @@index([userId])
 }
 
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  role      String   @default("admin") // "superadmin" | "admin"
+  addedBy   String?
+  createdAt DateTime @default(now())
+}
+
+model College {
+  id              String   @id
+  name            String
+  shortName       String
+  type            String   // "university" | "engineering" | "medical" | etc
+  ownership       String   // "government" | "private" | "deemed" | etc
+  location        String
+  district        String
+  website         String?
+  admissionPortal String?
+  contactPhone    String?
+  contactEmail    String?
+  description     String?
+  established     Int?
+  accreditation   String?
+  affiliation     String?
+  principal       String?
+  imageUrl        String?
+  courses         Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  notices Notice[]
+}
+
+model Notice {
+  id               String   @id
+  collegeId        String
+  title            String
+  type             String   // "admission" | "registration" | etc
+  publishedDate    String
+  lastDate         String?
+  status           String   // "active" | "upcoming" | "expired"
+  summary          String?
+  highlights       Json     @default("[]")
+  pdfUrl           String?
+  sourceUrl        String?
+  coursesAffected  Json     @default("[]")
+  branchesAffected Json     @default("[]")
+  deadlines        Json     @default("[]")
+  documentsRequired Json    @default("[]")
+  eligibility      String?
+  importantDates   Json     @default("[]")
+  aiSummary        String?
+  relatedNoticeIds Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@index([type])
+  @@index([status])
+}
+
 model Suggestion {
   id          String   @id @default(cuid())
   userId      String
