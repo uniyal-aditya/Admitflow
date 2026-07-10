@@ -7,7 +7,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.9",
@@ -30,6 +35,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/web-push": "^3.6.4",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3"
   }
