@@ -67,13 +67,7 @@ export function Navbar() {
               </button>
             </div>
           ) : !loading ? (
-            <Link
-              href="/login"
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign In
-            </Link>
+            <div className="w-8" />
           ) : null}
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -155,16 +149,7 @@ export function Navbar() {
                 <LogIn className="h-4 w-4" />
                 Logout ({user.name || user.email.split("@")[0]})
               </button>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
-              >
-                <LogIn className="h-4 w-4" />
-                Sign In
-              </Link>
-            )}
+            ) : null}
             {canInstall && (
               <button
                 onClick={() => { install(); setMobileOpen(false); }}

@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import {
   Bell, Moon, Sun, Globe, Heart, Clock,
-  RefreshCw, Info, Mail, Smartphone, User,
+  RefreshCw, Info, Mail, Smartphone, User, LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/components/AuthProvider";
 import { getSettings, setSettings, getFavorites, getDownloads, getNotifications } from "@/lib/store";
 import { UserSettings, NoticeType } from "@/types";
 import { noticeTypeLabel } from "@/lib/utils";
@@ -20,6 +22,8 @@ const allNoticeTypes: NoticeType[] = [
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [settings, setLocalSettings] = useState<UserSettings>(getSettings());
   const { isSubscribed, swReady, subscribe, unsubscribe } = useNotification();
@@ -156,6 +160,22 @@ export default function SettingsPage() {
             </div>
           </div>
         </Link>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <LogOut className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          Sign Out
+        </h2>
+        <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
+          <p className="text-sm text-gray-500 mb-3">Sign out of your account on this device</p>
+          <button
+            onClick={async () => { await logout(); router.push("/"); }}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
       </section>
 
       <section className="space-y-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { AuthModal } from "@/components/AuthModal";
 
 const features = [
   {
@@ -51,6 +51,7 @@ export default function LandingPage() {
   const { user, loading } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     if (user) router.push("/dashboard");
@@ -60,6 +61,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <nav className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-2 font-bold text-xl">
@@ -73,9 +75,9 @@ export default function LandingPage() {
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:rotate-90 dark:scale-0" />
               <Moon className="h-5 w-5 absolute inset-0 m-auto rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </button>
-            <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">
+            <button onClick={() => setAuthOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">
               <LogIn className="h-4 w-4" /> Sign In
-            </Link>
+            </button>
           </div>
           <div className="flex md:hidden items-center gap-2">
             <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -91,7 +93,7 @@ export default function LandingPage() {
           <div className="border-t px-4 py-3 md:hidden bg-white dark:bg-gray-950 dark:border-gray-800">
             <div className="flex flex-col gap-2">
               <Link href="/about" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">About</Link>
-              <Link href="/login" onClick={() => setMobileOpen(false)} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white text-center">Sign In</Link>
+              <button onClick={() => { setMobileOpen(false); setAuthOpen(true); }} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white text-center">Sign In</button>
             </div>
           </div>
         )}
@@ -113,9 +115,9 @@ export default function LandingPage() {
             Uttarakhand government colleges in one place. Stop visiting 10 websites every day.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-700 transition-all">
+            <button onClick={() => setAuthOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-700 transition-all">
               Get Started Free <ArrowRight className="h-4 w-4" />
-            </Link>
+            </button>
             <Link href="/about" className="inline-flex items-center gap-2 rounded-xl border px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-800 transition-all">
               Learn More <ChevronRight className="h-4 w-4" />
             </Link>
@@ -163,9 +165,9 @@ export default function LandingPage() {
               Free forever. No ads. No tracking.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-gray-100 transition-colors">
+              <button onClick={() => setAuthOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-gray-100 transition-colors">
                 Get Started Free <ArrowRight className="h-4 w-4" />
-              </Link>
+              </button>
             </div>
           </div>
         </section>

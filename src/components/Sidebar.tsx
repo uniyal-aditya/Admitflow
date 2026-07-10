@@ -14,7 +14,6 @@ import {
   Info,
   LayoutDashboard,
   Lightbulb,
-  LogIn,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -28,7 +27,6 @@ const sidebarLinks = [
   { href: "/suggest", label: "Suggest College", icon: Lightbulb },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/about", label: "About", icon: Info },
-  { href: "/login", label: "Sign In", icon: LogIn },
 ];
 
 export function Sidebar() {
