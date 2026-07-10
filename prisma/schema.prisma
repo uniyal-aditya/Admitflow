@@ -13,7 +13,7 @@ model User {
   name      String?
   password  String?
   googleId  String?
-  phone     String?
+  phone     String? @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -72,6 +72,17 @@ model Notification {
   noticeId    String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PhoneOtp {
+  id        String   @id @default(cuid())
+  phone     String
+  otpHash   String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
 }
 
 model PushSubscription {
