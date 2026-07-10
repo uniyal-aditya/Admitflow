@@ -14,12 +14,10 @@ import {
   Moon,
   Sun,
   Download,
-  LogIn,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { getUnreadCount } from "@/lib/store";
 import { useInstallApp } from "@/hooks/useInstallApp";
-import { useAuth } from "@/components/AuthProvider";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: GraduationCap },
@@ -33,10 +31,8 @@ export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = getUnreadCount();
   const { canInstall, install } = useInstallApp();
-  const { user, loading, logout } = useAuth();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
@@ -49,26 +45,6 @@ export function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-1">
-          {user ? (
-            <div className="flex items-center gap-2 px-3 py-1.5">
-              <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-                  {(user.name || user.email).charAt(0).toUpperCase()}
-                </div>
-                <span className="text-sm text-gray-600 dark:text-gray-400 max-w-[120px] truncate">
-                  {user.name || user.email.split("@")[0]}
-                </span>
-              </Link>
-              <button
-                onClick={logout}
-                className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1"
-              >
-                Logout
-              </button>
-            </div>
-          ) : !loading ? (
-            <div className="w-8" />
-          ) : null}
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname.startsWith(link.href);
@@ -141,15 +117,6 @@ export function Navbar() {
                 </Link>
               );
             })}
-            {user ? (
-              <button
-                onClick={() => { logout(); setMobileOpen(false); }}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors"
-              >
-                <LogIn className="h-4 w-4" />
-                Logout ({user.name || user.email.split("@")[0]})
-              </button>
-            ) : null}
             {canInstall && (
               <button
                 onClick={() => { install(); setMobileOpen(false); }}
