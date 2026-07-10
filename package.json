@@ -17,6 +17,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.9",
     "@prisma/client": "^6.19.3",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.18",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
