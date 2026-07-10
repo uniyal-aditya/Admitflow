@@ -47,20 +47,30 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/admin/stats");
+      if (res.status === 401) {
+        router.push("/");
+        return;
+      }
+      if (!res.ok) throw new Error("Failed to fetch");
+      const json = await res.json();
+      setStats(json);
+      setLastUpdated(new Date());
+    } catch (e: any) {
+      if (!loading) setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/admin/stats")
-      .then(async (res) => {
-        if (res.status === 401) {
-          router.push("/");
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to fetch");
-        const json = await res.json();
-        setStats(json);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
   }, [router]);
 
   if (loading) {
@@ -84,8 +94,16 @@ export default function AdminPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Owner-only panel — database & static data overview</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-1">Owner-only panel — database & static data overview</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Live"}
+          </div>
+        </div>
       </div>
 
       {/* Overview Cards */}

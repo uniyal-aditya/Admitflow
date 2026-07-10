@@ -17,6 +17,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.9",
     "@prisma/client": "^6.19.3",
+    "@tailwindcss/typography": "^0.5.20",
     "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.18",
     "bcryptjs": "^3.0.3",
@@ -29,6 +30,9 @@
     "nodemailer": "^9.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
