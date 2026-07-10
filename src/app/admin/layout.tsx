@@ -9,6 +9,7 @@ import {
   FileText,
   Lightbulb,
   Shield,
+  Bell,
   Menu,
   X,
 } from "lucide-react"
@@ -17,6 +18,7 @@ const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Colleges", href: "/admin/colleges", icon: Building2 },
   { label: "Notices", href: "/admin/notices", icon: FileText },
+  { label: "Notifications", href: "/admin/notifications", icon: Bell },
   { label: "Suggestions", href: "/admin/suggestions", icon: Lightbulb },
   { label: "Admins", href: "/admin/admins", icon: Shield },
 ]

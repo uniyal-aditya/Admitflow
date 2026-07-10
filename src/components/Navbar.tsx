@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell,
   BookOpen,
@@ -14,6 +14,7 @@ import {
   Moon,
   Sun,
   Download,
+  Shield,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { getUnreadCount } from "@/lib/store";
@@ -33,6 +34,14 @@ export function Navbar() {
   const { theme, setTheme } = useTheme();
   const unreadCount = getUnreadCount();
   const { canInstall, install } = useInstallApp();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/check")
+      .then((r) => r.json())
+      .then((d) => setIsAdmin(d.admin))
+      .catch(() => {});
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
@@ -63,6 +72,19 @@ export function Navbar() {
               </Link>
             );
           })}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                pathname.startsWith("/admin")
+                  ? "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -117,6 +139,20 @@ export function Navbar() {
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  pathname.startsWith("/admin")
+                    ? "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                }`}
+              >
+                <Shield className="h-4 w-4" />
+                Admin Panel
+              </Link>
+            )}
             {canInstall && (
               <button
                 onClick={() => { install(); setMobileOpen(false); }}
