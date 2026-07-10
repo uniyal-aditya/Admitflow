@@ -1,19 +1,26 @@
 import webpush from "web-push";
 
-const publicKey = process.env.VAPID_PUBLIC_KEY || "";
-const privateKey = process.env.VAPID_PRIVATE_KEY || "";
-const subject = process.env.VAPID_SUBJECT || "mailto:admitflow@example.com";
-
-webpush.setVapidDetails(subject, publicKey, privateKey);
+let initialized = false;
+function ensureVapid() {
+  if (initialized) return;
+  const publicKey = process.env.VAPID_PUBLIC_KEY || "";
+  const privateKey = process.env.VAPID_PRIVATE_KEY || "";
+  const subject = process.env.VAPID_SUBJECT || "mailto:admitflow@example.com";
+  if (publicKey && privateKey) {
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+    initialized = true;
+  }
+}
 
 export function getVapidPublicKey(): string {
-  return publicKey;
+  return process.env.VAPID_PUBLIC_KEY || "";
 }
 
 export async function sendPushNotification(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: { title: string; body: string; url?: string }
 ) {
+  ensureVapid();
   try {
     await webpush.sendNotification(
       {
