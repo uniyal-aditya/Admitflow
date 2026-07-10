@@ -157,6 +157,10 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t py-8 text-center text-sm text-gray-400 dark:border-gray-800">
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <Link href="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Privacy</Link>
+          <Link href="/tos" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Terms</Link>
+        </div>
         <p>AdmitFlow v1.0 &mdash; Dedicated to Uttarakhand Students</p>
       </footer>
     </div>

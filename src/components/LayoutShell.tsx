@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Sidebar } from "@/components/Sidebar";
@@ -7,6 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
+  const hideFooter = pathname.startsWith("/admin");
 
   if (isLanding) {
     return <>{children}</>;
@@ -21,6 +23,14 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      {!hideFooter && (
+        <footer className="border-t py-4 px-6 text-xs text-gray-400 dark:border-gray-800">
+          <div className="flex items-center justify-center gap-4">
+            <Link href="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Privacy</Link>
+            <Link href="/tos" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Terms</Link>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
