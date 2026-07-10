@@ -3,6 +3,7 @@
 import {
   GraduationCap, Heart, Sparkles,
   Shield, BookOpen, Users, Target, Star,
+  Globe, ExternalLink, Linkedin, User,
 } from "lucide-react";
 
 const values = [
@@ -38,8 +39,11 @@ const values = [
   },
 ];
 
-const team = [
-  { name: "AdmitFlow Team", role: "Built with ❤️ for students" },
+const socials = [
+  { label: "Portfolio", href: "https://uaditya.vercel.app", icon: Globe },
+  { label: "Dev Site", href: "https://adityauniyal.vercel.app", icon: User },
+  { label: "Fiverr", href: "https://www.fiverr.com/uniyal_aditya", icon: ExternalLink },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/uniyaladitya", icon: Linkedin },
 ];
 
 export default function AboutPage() {
@@ -80,14 +84,19 @@ export default function AboutPage() {
           <h2 className="text-xl font-bold mt-8 mb-4">Supported Colleges</h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {[
-              "Doon University",
-              "UKTech (VMSBUTU)",
-              "GBPIET Pauri",
-              "THDC IHET Tehri",
-              "GIT Gopeshwar",
-              "GIT Uttarkashi",
-              "GIT Tanakpur",
-              "WIT Dehradun",
+              "Doon University", "UKTech (VMSBUTU)", "GBPIET Pauri", "THDC IHET Tehri",
+              "GIT Gopeshwar", "GIT Uttarkashi", "GIT Tanakpur", "WIT Dehradun",
+              "Doon Medical College", "VCSGGMS&RI", "SSJ Medical", "GMC Haridwar",
+              "Himalayan Institute", "SGRR Medical", "Gautam Buddha", "GEU Medical",
+              "UPES Law", "IMS Unison Law", "Uttaranchal Law", "GEU Law",
+              "ICFAI Law", "Kumaun Law", "Govt Girls Degree Haldwani", "PG College Tehri",
+              "Degree College Karanprayag", "Degree College Kashipur", "Degree College Kotdwar",
+              "Degree College Vikasnagar", "Degree College Bageshwar", "APB PG College",
+              "GP Kashipur", "GP Girls Dehradun", "GP Aamwala", "GP Barkot",
+              "GP Berinag", "GP Girls Nainital", "GRD Pharmacy", "Himalayan Pharmacy",
+              "SGRR Pharmacy", "IMS Dehradun", "Amrapali Management", "Doon Business School",
+              "Rishikul AYUSH", "Patanjali Ayurveda", "AIIMS Nursing", "IHM Dehradun",
+              "Uttaranchal University", "SBSU", "Amrapali University",
             ].map((name) => (
               <div key={name} className="flex items-center gap-3 rounded-lg border bg-gray-50 p-3 dark:bg-gray-800/50 dark:border-gray-700">
                 <GraduationCap className="h-5 w-5 text-indigo-500 shrink-0" />
@@ -117,6 +126,39 @@ export default function AboutPage() {
       </section>
 
 
+
+      <section className="rounded-2xl border bg-white p-8 dark:bg-gray-900 dark:border-gray-800">
+        <div className="flex flex-col sm:flex-row items-start gap-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+            <User className="h-8 w-8" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold mb-1">About the Developer</h2>
+            <p className="text-sm text-gray-500 mb-3">Aditya Uniyal — India</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+              I design and build scalable digital systems — from production-ready Discord bots to real-time web platforms
+              and experimental interactive applications. Architecture first, implementation second, always.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {socials.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <a
+                    key={s.href}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {s.label}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="text-center pb-8">
         <h2 className="text-xl font-bold mb-2">Built for Students</h2>
