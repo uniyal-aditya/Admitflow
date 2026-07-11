@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/api/data/verify",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
