@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  ArrowRight, Bell, BookOpen, GraduationCap, BarChart3,
+  ArrowRight, Bell, BookOpen, BarChart3,
   CalendarDays, Sparkles, Shield, Lightbulb, ChevronRight,
   Menu, X, Moon, Sun,
 } from "lucide-react";
@@ -51,9 +52,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <nav className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <GraduationCap className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">AdmitFlow</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="AdmitFlow" width={32} height={32} className="h-8 w-8" />
+            <span className="font-bold text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">AdmitFlow</span>
           </Link>
           <div className="hidden md:flex items-center gap-3">
             <Link href="/about" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">About</Link>
@@ -84,8 +85,10 @@ export default function LandingPage() {
 
       <main>
         <section className="mx-auto max-w-6xl px-4 pt-20 pb-16 md:pt-32 md:pb-24 text-center">
+          <div className="flex justify-center mb-8">
+            <Image src="/logo.png" alt="AdmitFlow" width={96} height={96} className="h-24 w-24" priority />
+          </div>
           <div className="inline-flex items-center gap-2 rounded-full border bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800 mb-6">
-            <GraduationCap className="h-4 w-4" />
             Uttarakhand Government College Admissions
           </div>
           <h1 className="max-w-4xl mx-auto text-4xl md:text-6xl font-bold tracking-tight">
