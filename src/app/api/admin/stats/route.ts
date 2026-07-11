@@ -18,74 +18,75 @@ async function checkAdmin() {
 }
 
 export async function GET() {
-  const auth = await checkAdmin();
-  if (!auth.authorized) {
-    return NextResponse.json({ error: auth.reason }, { status: 401 });
-  }
+  try {
+    const auth = await checkAdmin();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.reason }, { status: auth.reason === "ADMIN_EMAIL not configured" ? 500 : 401 });
+    }
 
-  const collegeTypes = colleges.reduce<Record<string, number>>((acc, c) => {
-    acc[c.type] = (acc[c.type] || 0) + 1;
-    return acc;
-  }, {});
+    const collegeTypes = colleges.reduce<Record<string, number>>((acc, c) => {
+      acc[c.type] = (acc[c.type] || 0) + 1;
+      return acc;
+    }, {});
 
-  const collegeOwnership = colleges.reduce<Record<string, number>>((acc, c) => {
-    acc[c.ownership] = (acc[c.ownership] || 0) + 1;
-    return acc;
-  }, {});
+    const collegeOwnership = colleges.reduce<Record<string, number>>((acc, c) => {
+      acc[c.ownership] = (acc[c.ownership] || 0) + 1;
+      return acc;
+    }, {});
 
-  const noticeByType = notices.reduce<Record<string, number>>((acc, n) => {
-    acc[n.type] = (acc[n.type] || 0) + 1;
-    return acc;
-  }, {});
+    const noticeByType = notices.reduce<Record<string, number>>((acc, n) => {
+      acc[n.type] = (acc[n.type] || 0) + 1;
+      return acc;
+    }, {});
 
-  const activeNotices = notices.filter((n) => {
-    const now = new Date();
-    if (n.lastDate && new Date(n.lastDate) < now) return false;
-    return true;
-  }).length;
+    const activeNotices = notices.filter((n) => {
+      const now = new Date();
+      if (n.lastDate && new Date(n.lastDate) < now) return false;
+      return true;
+    }).length;
 
-  const [
-    totalUsers,
-    totalFavorites,
-    totalDownloads,
-    totalNotifications,
-    totalSuggestions,
-    totalPushSubscriptions,
-    recentUsers,
-    pendingSuggestions,
-    recentSuggestions,
-    recentDownloads,
-    suggestionStats,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.favorite.count(),
-    prisma.download.count(),
-    prisma.notification.count(),
-    prisma.suggestion.count(),
-    prisma.pushSubscription.count(),
-    prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 10, select: { id: true, email: true, name: true, createdAt: true } }),
-    prisma.suggestion.count({ where: { status: "pending" } }),
-    prisma.suggestion.findMany({ orderBy: { suggestedAt: "desc" }, take: 10 }),
-    prisma.download.findMany({ orderBy: { downloadedAt: "desc" }, take: 10 }),
-    prisma.suggestion.groupBy({ by: ["status"], _count: true }),
-  ]);
+    const [
+      totalUsers,
+      totalFavorites,
+      totalDownloads,
+      totalNotifications,
+      totalSuggestions,
+      totalPushSubscriptions,
+      recentUsers,
+      pendingSuggestions,
+      recentSuggestions,
+      recentDownloads,
+      suggestionStats,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.favorite.count(),
+      prisma.download.count(),
+      prisma.notification.count(),
+      prisma.suggestion.count(),
+      prisma.pushSubscription.count(),
+      prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 10, select: { id: true, email: true, name: true, createdAt: true } }),
+      prisma.suggestion.count({ where: { status: "pending" } }),
+      prisma.suggestion.findMany({ orderBy: { suggestedAt: "desc" }, take: 10 }),
+      prisma.download.findMany({ orderBy: { downloadedAt: "desc" }, take: 10 }),
+      prisma.suggestion.groupBy({ by: ["status"], _count: true }),
+    ]);
 
-  const notificationByType = await prisma.notification.groupBy({
-    by: ["type"],
-    _count: true,
-  });
+    const notificationByType = await prisma.notification.groupBy({
+      by: ["type"],
+      _count: true,
+    });
 
-  const [readNotifs, unreadNotifs] = await Promise.all([
-    prisma.notification.count({ where: { read: true } }),
-    prisma.notification.count({ where: { read: false } }),
-  ]);
+    const [readNotifs, unreadNotifs] = await Promise.all([
+      prisma.notification.count({ where: { read: true } }),
+      prisma.notification.count({ where: { read: false } }),
+    ]);
 
-  const topFavorites = await prisma.favorite.groupBy({
-    by: ["collegeId"],
-    _count: true,
-    orderBy: { _count: { collegeId: "desc" } },
-    take: 5,
-  });
+    const topFavorites = await prisma.favorite.groupBy({
+      by: ["collegeId"],
+      _count: true,
+      orderBy: { _count: { collegeId: "desc" } },
+      take: 5,
+    });
 
   return NextResponse.json({
     data: {
@@ -128,4 +129,8 @@ export async function GET() {
       pushSubscriptions: totalPushSubscriptions,
     },
   });
+  } catch (error) {
+    console.error("Stats API error:", error);
+    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+  }
 }

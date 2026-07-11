@@ -33,20 +33,31 @@ export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const unreadCount = getUnreadCount();
+  const [unreadCount, setUnreadCount] = useState(0);
   const { canInstall, install } = useInstallApp();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setUnreadCount(getUnreadCount());
+  }, []);
 
   useEffect(() => {
     fetch("/api/admin/check")
       .then((r) => r.json())
-      .then((d) => setIsAdmin(d.admin))
-      .catch(() => {});
+      .then((d) => setIsAdmin(d.admin === true))
+      .catch(() => setIsAdmin(false));
   }, []);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setMobileOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [mobileOpen]);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
@@ -77,7 +88,7 @@ export function Navbar() {
               </Link>
             );
           })}
-          {isAdmin && (
+          {isAdmin === true && (
             <Link
               href="/admin"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -106,6 +117,7 @@ export function Navbar() {
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle theme"
           >
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:rotate-90 dark:scale-0" />
             <Moon className="h-5 w-5 absolute inset-0 m-auto rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -114,10 +126,11 @@ export function Navbar() {
           <Link
             href="/notices"
             className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Notifications"
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              <span aria-label={`${unreadCount} unread notifications`} className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -161,7 +174,7 @@ export function Navbar() {
                   </Link>
                 );
               })}
-              {isAdmin && (
+              {isAdmin === true && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileOpen(false)}

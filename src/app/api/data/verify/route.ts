@@ -20,46 +20,48 @@ export async function GET() {
     return NextResponse.json({ error: "AI not configured" }, { status: 500 });
   }
 
-  const sampleColleges = colleges.slice(0, 8).map((c) =>
-    `- ${c.name} (${c.shortName}): ${c.type}, ${c.ownership}, ${c.district}, est. ${c.established}, courses: ${c.courses.length}, fees range: ${Math.min(...c.courses.map(cr => cr.fees))}-${Math.max(...c.courses.map(cr => cr.fees))}`
+  const allColleges = colleges.map((c) =>
+    `- ${c.name} (${c.shortName}): ${c.type}, ${c.ownership}, ${c.district}, est. ${c.established}, courses: ${c.courses.length}, fees range: ${Math.min(...c.courses.map(cr => cr.fees))}-${Math.max(...c.courses.map(cr => cr.fees))}, courses: [${c.courses.map(cr => `${cr.name}(${cr.fees})`).join(", ")}]`
   ).join("\n");
 
-  const activeNotices = notices.filter((n) => getComputedStatus(n) === "active").slice(0, 5);
+  const activeNotices = notices.filter((n) => getComputedStatus(n) === "active");
   const noticeSample = activeNotices.map((n) =>
     `- ${n.title} (college: ${n.collegeId}, type: ${n.type}, published: ${n.publishedDate}, lastDate: ${n.lastDate || "N/A"})`
   ).join("\n");
 
-  const timelineSample = Object.entries(collegeTimelines).slice(0, 3).map(([id, tl]) =>
-    `- ${id}: currentStage=${tl.currentStage}, stages=${tl.stages.length}`
+  const timelineSample = Object.entries(collegeTimelines).map(([id, tl]) =>
+    `- ${id}: currentStage=${tl.currentStage}, stages=${tl.stages.map(s => `${s.stage}(${s.date || "no-date"})`).join(" -> ")}`
   ).join("\n");
 
-  const prompt = `You are a data verification assistant. Review the following Uttarakhand college admission data and identify ANY incorrect or implausible information based on your knowledge.
+  const prompt = `You are a data verification assistant. Review ALL of the following Uttarakhand college admission data and identify ANY incorrect or implausible information based on your knowledge.
 
-## Colleges (sample):
-${sampleColleges}
+## All Colleges (${colleges.length} total):
+${allColleges}
 
-## Active Notices (sample):
+## All Active Notices (${activeNotices.length} total):
 ${noticeSample}
 
-## Timelines (sample):
+## All Timelines (${Object.keys(collegeTimelines).length} total):
 ${timelineSample}
 
-## Instructions:
-1. Check if established years match known facts
-2. Check if ownership (govt/private) is correct
-3. Check if college types (university/engineering/medical etc.) are correct
-4. Check if fee ranges seem realistic
-5. Check if course offerings seem appropriate for the college type
-6. Check if timeline dates are plausible for 2026
+## Verification Categories:
+1. **College Data**: established years, ownership (govt/private), college types, fee ranges, course appropriateness
+2. **Notice Data**: published dates (must be past), plausible content
+3. **Timeline Data**: date ordering, stage sequence, current stage correctness
 
-Return a JSON object with:
+## Instructions:
+- For EVERY item with an issue, include: { "id": "college-id", "item": "College Name - Field", "field": "field name", "issue": "description", "suggestedFix": "what it should be", "category": "college|notice|timeline", "dataPath": "colleges.X.name or notices.X.title" }
+- Only flag items where you are confident there is an error
+- Be thorough but conservative
+
+Return JSON:
 {
-  "issues": [{ "item": "college/notice/timeline name", "field": "field name", "issue": "description of problem", "suggestedFix": "what it should be" }],
-  "verifiedOk": number of items verified without issues,
-  "sourcesChecked": ["source1", "source2"],
+  "issues": [{ "id": string, "item": string, "field": string, "issue": string, "suggestedFix": string, "category": string, "dataPath": string }],
+  "verifiedOk": number,
+  "totalChecked": number,
+  "sourcesChecked": string[],
   "lastVerified": "ISO date"
-}
-Only flag items where you are confident there is an error. Be conservative.`;
+}`;
 
   try {
     const prov = PROVIDERS[provider] || PROVIDERS.openrouter;

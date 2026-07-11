@@ -74,16 +74,6 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model EmailOtp {
-  id        String   @id @default(cuid())
-  email     String
-  otpHash   String
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@index([email])
-}
 
 model PushSubscription {
   id        String   @id @default(cuid())
@@ -178,6 +168,17 @@ model Visitor {
   isPwaUser      Boolean  @default(false)
   userAgent      String?
   createdAt      DateTime @default(now())
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String?
+  adminEmail String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
 }
 
 model Suggestion {

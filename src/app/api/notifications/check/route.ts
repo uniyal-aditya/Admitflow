@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth";
 import { notices } from "@/data/notices";
 import { sendPushToUser } from "@/lib/webpush";
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/email";
 import { emailTemplate } from "@/lib/email-template";
 
 export async function POST() {
@@ -64,41 +64,36 @@ export async function POST() {
 
     if (settings.deviceNotifications && user.pushSubscriptions.length > 0) {
       for (const notice of matching.slice(0, 5)) {
-        await sendPushToUser(
+        const results = await sendPushToUser(
           user.pushSubscriptions.map((s) => ({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth })),
           { title: notice.title, body: notice.summary || notice.title, url: `/notices/${notice.id}` }
         );
+        const staleEndpoints = user.pushSubscriptions
+          .filter((_, i) => results[i] === false)
+          .map((s) => s.endpoint);
+        if (staleEndpoints.length > 0) {
+          await prisma.pushSubscription.deleteMany({ where: { endpoint: { in: staleEndpoints } } });
+        }
       }
     }
 
     if (settings.emailNotifications && user.email) {
-      const smtpUser = process.env.SMTP_USER;
-      const smtpPass = process.env.SMTP_PASS;
-      if (smtpUser && smtpPass) {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
-          port: parseInt(process.env.SMTP_PORT || "587"),
-          secure: process.env.SMTP_PORT === "465",
-          auth: { user: smtpUser, pass: smtpPass },
-        });
+      const noticeLinks = matching.slice(0, 5).map((n) => ({
+        title: n.title,
+        url: `${process.env.NEXT_PUBLIC_URL || "https://admitflowin.vercel.app"}/notices/${n.id}`,
+      }));
 
-        const noticeLinks = matching.slice(0, 5).map((n) => ({
-          title: n.title,
-          url: `${process.env.NEXT_PUBLIC_URL || "https://admitflowin.vercel.app"}/notices/${n.id}`,
-        }));
-
-        await transporter.sendMail({
-          from: `"AdmitFlow" <${process.env.SMTP_FROM || smtpUser}>`,
-          to: user.email,
-          subject: `New notices match your preferences (${matching.length})`,
-          html: emailTemplate(
-            `${matching.length} new notice${matching.length > 1 ? "s" : ""} for you`,
-            `We found new notices matching your preferences from your favorite colleges.`,
-            undefined,
-            noticeLinks
-          ),
-        });
-      }
+      await sendEmail({
+        to: user.email,
+        subject: `New notices match your preferences (${matching.length})`,
+        text: `${matching.length} new notice${matching.length > 1 ? "s" : ""} for you from your favorite colleges.`,
+        html: emailTemplate(
+          `${matching.length} new notice${matching.length > 1 ? "s" : ""} for you`,
+          `We found new notices matching your preferences from your favorite colleges.`,
+          undefined,
+          noticeLinks
+        ),
+      });
     }
 
     return NextResponse.json({ ok: true, newNotifications: matching.length });

@@ -48,3 +48,18 @@ export async function sendPushToUser(
   );
   return results.map((r) => r.status === "fulfilled" ? r.value : false);
 }
+
+export async function sendPushWithCleanup(
+  subscriptions: { endpoint: string; p256dh: string; auth: string }[],
+  payload: { title: string; body: string; url?: string },
+  onStale: (endpoint: string) => void
+) {
+  const results = await Promise.allSettled(
+    subscriptions.map((sub) => sendPushNotification(sub, payload))
+  );
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled" && r.value === false) {
+      onStale(subscriptions[i].endpoint);
+    }
+  });
+}

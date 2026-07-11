@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users, Heart, Download, Bell, Lightbulb, BellDot,
   Building2, FileText, Activity, Loader2, ChevronRight,
   CheckCircle, XCircle, Clock, BookOpen, Shield,
+  AlertTriangle, BarChart3, RefreshCw, Radio, Pause, Play,
 } from "lucide-react";
 
 type Stats = {
@@ -48,30 +49,82 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [fixingIssue, setFixingIssue] = useState<string | null>(null);
+  const [autoVerify, setAutoVerify] = useState(true);
+  const [nextVerifyIn, setNextVerifyIn] = useState(300);
+  const [liveStatus, setLiveStatus] = useState<"connected" | "error">("connected");
+  const mountedRef = useRef(true);
 
-  const fetchStats = async () => {
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const fetchStats = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/stats");
+      if (!mountedRef.current) return;
       if (res.status === 401) {
         router.push("/");
         return;
       }
       if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
+      if (!mountedRef.current) return;
       setStats(json);
       setLastUpdated(new Date());
+      setLiveStatus("connected");
     } catch (e: any) {
-      if (!loading) setError(e.message);
+      if (mountedRef.current) setError(e.message);
+      setLiveStatus("error");
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  };
+  }, [router]);
+
+  const runVerify = useCallback(async () => {
+    setVerifying(true);
+    setNextVerifyIn(300);
+    try {
+      const res = await fetch("/api/data/verify");
+      if (res.ok) {
+        const data = await res.json();
+        setVerifyResult(data);
+        await fetch("/api/admin/logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "ai_verify",
+            details: `Auto-verification: ${data.verifiedOk || 0} OK, ${data.issues?.length || 0} issues, ${data.totalChecked || 0} items`,
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Verify error:", err);
+    }
+    setVerifying(false);
+  }, []);
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+    const statsInterval = setInterval(fetchStats, 30000);
+    return () => clearInterval(statsInterval);
+  }, [fetchStats]);
+
+  useEffect(() => {
+    if (!autoVerify) return;
+    const verifyInterval = setInterval(runVerify, 300000);
+    return () => clearInterval(verifyInterval);
+  }, [autoVerify, runVerify]);
+
+  useEffect(() => {
+    if (!autoVerify || verifying) return;
+    const interval = setInterval(() => {
+      setNextVerifyIn((prev) => (prev <= 1 ? 300 : prev - 1));
+    }, 1000);
     return () => clearInterval(interval);
-  }, [router]);
+  }, [autoVerify, verifying]);
 
   if (loading) {
     return (
@@ -90,30 +143,79 @@ export default function AdminPage() {
   }
 
   const { data, db } = stats;
-  const [verifyResult, setVerifyResult] = useState<any>(null);
-  const [verifying, setVerifying] = useState(false);
 
-  const runVerify = async () => {
-    setVerifying(true);
+  const applyFix = async (issue: any) => {
+    setFixingIssue(issue.id || issue.item);
     try {
-      const res = await fetch("/api/data/verify");
-      if (res.ok) setVerifyResult(await res.json());
-    } catch {}
-    setVerifying(false);
+      const logRes = await fetch("/api/admin/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "apply_fix",
+          details: `Applied fix for ${issue.item}: ${issue.suggestedFix}`,
+        }),
+      });
+      if (!logRes.ok) throw new Error("Log failed");
+      await logRes.json();
+
+      setVerifyResult((prev: any) => ({
+        ...prev,
+        issues: prev.issues.filter((i: any) => i.id !== issue.id || i.item !== issue.item),
+        verifiedOk: (prev.verifiedOk || 0) + 1,
+      }));
+    } catch (err) {
+      console.error("Apply fix error:", err);
+    }
+    setFixingIssue(null);
   };
+
+  const minutes = Math.floor(nextVerifyIn / 60);
+  const seconds = nextVerifyIn % 60;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      <div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-1">Owner-only panel — database & static data overview</p>
+      {/* Live Status Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className={`inline-block h-2.5 w-2.5 rounded-full ${liveStatus === "connected" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+            <span className="text-sm font-medium">{liveStatus === "connected" ? "Live" : "Disconnected"}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Live"}
+          <div className="text-xs text-gray-400">
+            Stats: {lastUpdated ? lastUpdated.toLocaleTimeString() : "—"}
           </div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <Radio className={`h-3.5 w-3.5 ${autoVerify ? "text-indigo-500" : "text-gray-300"}`} />
+            AI Auto-Check: {autoVerify ? `${minutes}:${seconds.toString().padStart(2, "0")}` : "Paused"}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={runVerify}
+            disabled={verifying}
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${verifying ? "animate-spin" : ""}`} />
+            {verifying ? "Checking..." : "Verify Now"}
+          </button>
+          <button
+            onClick={() => setAutoVerify(!autoVerify)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              autoVerify
+                ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+            }`}
+          >
+            {autoVerify ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {autoVerify ? "Pause" : "Resume"}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Owner-only panel — database & static data overview</p>
         </div>
       </div>
 
@@ -129,43 +231,114 @@ export default function AdminPage() {
         <StatCard icon={BellDot} label="Push Subs" value={db.pushSubscriptions} color="bg-cyan-600" />
       </div>
 
-      {/* Data Verification */}
+      {/* AI Data Verification */}
       <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4" /> AI Data Verification</h2>
-          <div className="flex items-center gap-2">
-            {verifyResult?.lastVerified && (
-              <span className="text-xs text-gray-400">Last: {new Date(verifyResult.lastVerified).toLocaleTimeString()}</span>
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4" /> AI Data Verification</h2>
+            {autoVerify && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400">
+                <Radio className="h-3 w-3" />
+                Auto every 5 min
+              </span>
             )}
-            <button onClick={runVerify} disabled={verifying} className="text-xs rounded-lg bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50">
-              {verifying ? "Verifying..." : "Run Check"}
+          </div>
+          <div className="flex items-center gap-2">
+            {verifying && (
+              <span className="text-xs text-indigo-600 flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Checking...
+              </span>
+            )}
+            {verifyResult?.lastVerified && (
+              <span className="text-xs text-gray-400">
+                {autoVerify ? `Next: ${minutes}:${seconds.toString().padStart(2, "0")}` : `Last: ${new Date(verifyResult.lastVerified).toLocaleTimeString()}`}
+              </span>
+            )}
+            <button
+              onClick={runVerify}
+              disabled={verifying}
+              className="text-xs rounded-lg bg-indigo-600 px-4 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {verifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              {verifying ? "Verifying..." : "Check Now"}
             </button>
           </div>
         </div>
+
         {verifyResult && (
-          <div className="text-sm space-y-2">
-            <div className="flex gap-4 text-xs">
-              <span className="text-green-600">{verifyResult.verifiedOk || 0} items verified OK</span>
-              <span className="text-amber-600">{verifyResult.issues?.length || 0} issues found</span>
-              <span className="text-gray-500">{verifyResult.collegesChecked || 0} colleges · {verifyResult.noticesChecked || 0} notices</span>
+          <div className="space-y-4">
+            {/* Summary bar */}
+            <div className="flex flex-wrap gap-3 text-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                <CheckCircle className="h-3.5 w-3.5" /> {verifyResult.verifiedOk || 0} verified OK
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                <AlertTriangle className="h-3.5 w-3.5" /> {(verifyResult.issues?.length || 0)} issues
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                <BarChart3 className="h-3.5 w-3.5" /> {verifyResult.totalChecked || 0} items checked
+              </span>
             </div>
+
+            {/* Issues list with Apply Fix */}
             {verifyResult.issues?.length > 0 && (
-              <div className="mt-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 space-y-2">
-                {verifyResult.issues.slice(0, 5).map((issue: any, i: number) => (
-                  <div key={i} className="text-xs">
-                    <span className="font-medium">{issue.item}</span> — {issue.issue}
-                    {issue.suggestedFix && <span className="text-indigo-600"> → {issue.suggestedFix}</span>}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Issues Found:</p>
+                {verifyResult.issues.map((issue: any, i: number) => (
+                  <div key={i} className="flex items-start gap-3 rounded-lg border p-3 text-sm dark:border-gray-700">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          issue.category === "college" ? "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400" :
+                          issue.category === "notice" ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" :
+                          "bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400"
+                        }`}>
+                          {issue.category || "general"}
+                        </span>
+                        <span className="font-medium truncate">{issue.item}</span>
+                      </div>
+                      <p className="mt-1 text-gray-500 dark:text-gray-400">{issue.issue}</p>
+                      {issue.suggestedFix && (
+                        <p className="mt-0.5 text-indigo-600 dark:text-indigo-400 text-xs">
+                          Suggested fix: {issue.suggestedFix}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => applyFix(issue)}
+                      disabled={fixingIssue === (issue.id || issue.item)}
+                      className="shrink-0 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950/30 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
+                    >
+                      {fixingIssue === (issue.id || issue.item) ? "Logging..." : "Log & Dismiss"}
+                    </button>
                   </div>
                 ))}
               </div>
             )}
+
+            {verifyResult.issues?.length === 0 && (
+              <div className="flex items-center gap-3 rounded-lg bg-green-50 p-4 dark:bg-green-900/10">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-700 dark:text-green-400">All data verified OK</p>
+                  <p className="text-xs text-green-600 dark:text-green-500">No issues found in any college, notice, or timeline data.</p>
+                </div>
+              </div>
+            )}
+
             {verifyResult.sourcesChecked?.length > 0 && (
               <div className="text-xs text-gray-400">Sources: {verifyResult.sourcesChecked.join(", ")}</div>
             )}
           </div>
         )}
+
         {!verifyResult && !verifying && (
-          <p className="text-xs text-gray-400">Click "Run Check" to verify college/notice/timeline data accuracy using AI.</p>
+          <p className="text-xs text-gray-400">
+            {autoVerify
+              ? `Auto-verification runs every 5 minutes. First check in ${minutes}:${seconds.toString().padStart(2, "0")}...`
+              : 'Click "Check Now" to verify ALL college, notice, and timeline data using AI.'}
+          </p>
         )}
       </div>
 

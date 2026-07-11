@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Users,
+  ScrollText,
 } from "lucide-react"
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { label: "Notifications", href: "/admin/notifications", icon: Bell },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Suggestions", href: "/admin/suggestions", icon: Lightbulb },
+  { label: "Logs", href: "/admin/logs", icon: ScrollText },
   { label: "Admins", href: "/admin/admins", icon: Shield },
 ]
 

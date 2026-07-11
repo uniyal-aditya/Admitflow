@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { sendPushToUser } from "@/lib/webpush";
+import { sendEmail } from "@/lib/email";
 import { emailTemplate } from "@/lib/email-template";
+
+const CONCURRENCY_LIMIT = 10;
+
+async function sendBatched<T>(
+  items: T[],
+  fn: (item: T) => Promise<void>,
+  batchSize = CONCURRENCY_LIMIT
+) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.allSettled(batch.map(fn));
+  }
+}
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
@@ -25,7 +38,6 @@ export async function POST(req: NextRequest) {
 
     let pushSent = 0;
     let emailsSent = 0;
-    let notified = 0;
 
     const notifyAll = await prisma.notification.createMany({
       data: users.map((u) => ({
@@ -37,18 +49,17 @@ export async function POST(req: NextRequest) {
         noticeId: url || null,
       })),
     });
-    notified = notifyAll.count;
 
     const userSubs: { endpoint: string; p256dh: string; auth: string }[] = [];
     const emailRecipients: { email: string; name: string | null }[] = [];
 
     for (const user of users) {
-      if (channels?.push !== false) {
+      if (channels?.push !== false && user.settings?.deviceNotifications !== false) {
         for (const sub of user.pushSubscriptions) {
           userSubs.push({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth });
         }
       }
-      if (channels?.email !== false && user.email) {
+      if (channels?.email !== false && user.email && user.settings?.emailNotifications !== false) {
         emailRecipients.push({ email: user.email, name: user.name });
       }
     }
@@ -63,37 +74,22 @@ export async function POST(req: NextRequest) {
     }
 
     if (emailRecipients.length > 0) {
-      const smtpUser = process.env.SMTP_USER;
-      const smtpPass = process.env.SMTP_PASS;
-      const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-      const smtpPort = parseInt(process.env.SMTP_PORT || "587");
-      const smtpFrom = process.env.SMTP_FROM || smtpUser;
-
-      if (smtpUser && smtpPass) {
-        const transporter = nodemailer.createTransport({
-          host: smtpHost, port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: smtpUser, pass: smtpPass },
-        });
-
-        for (const recipient of emailRecipients) {
-          try {
-            await transporter.sendMail({
-              from: `"AdmitFlow" <${smtpFrom}>`,
-              to: recipient.email,
-              subject: `[AdmitFlow] ${title}`,
-              text: `${message || title}\n\n${url ? `View details: ${url}\n` : ""}You are receiving this because you enabled email notifications in AdmitFlow settings.`,
-              html: emailTemplate(title, message || title, url || undefined),
-            });
-            emailsSent++;
-          } catch (err) {
-            console.error(`Email send failed for ${recipient.email}:`, err);
-          }
+      await sendBatched(emailRecipients, async (recipient) => {
+        try {
+          await sendEmail({
+            to: recipient.email,
+            subject: `[AdmitFlow] ${title}`,
+            text: `${message || title}\n\n${url ? `View details: ${url}\n` : ""}You are receiving this because you enabled email notifications in AdmitFlow settings.`,
+            html: emailTemplate(title, message || title, url || undefined),
+          });
+          emailsSent++;
+        } catch (err) {
+          console.error(`Email send failed for ${recipient.email}:`, err);
         }
-      }
+      });
     }
 
-    return NextResponse.json({ notified, pushSent, emailsSent, totalUsers: users.length });
+    return NextResponse.json({ notified: notifyAll.count, pushSent, emailsSent, totalUsers: users.length });
   } catch (err) {
     console.error("Broadcast error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

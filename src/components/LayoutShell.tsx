@@ -24,7 +24,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1">
         <Sidebar />
         <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto pb-24">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             <motion.div
               key={pathname}
               initial={{ opacity: 0, y: 12 }}
