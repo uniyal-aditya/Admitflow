@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { X, GraduationCap, Send, Loader2 } from "lucide-react";
 
 const STORAGE_KEY = "af_registered";
@@ -38,133 +39,75 @@ export function RegistrationPopup() {
     if (!name.trim()) return;
     setSubmitting(true);
     try {
-      const isPwa = window.matchMedia("(display-mode: standalone)").matches;
       await fetch("/api/visitors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-          referralSource: referralSource === "Other" ? customSource.trim() : referralSource,
-          isPwaUser: isPwa,
-          userAgent: navigator.userAgent,
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+          referralSource: referralSource || null,
+          customSource: referralSource === "Other" ? customSource.trim() || null : null,
         }),
       });
-      localStorage.setItem(STORAGE_KEY, "true");
+      localStorage.setItem(STORAGE_KEY, "1");
       setDone(true);
-      setTimeout(() => setOpen(false), 2000);
+      setTimeout(() => setOpen(false), 1500);
     } catch {} finally {
       setSubmitting(false);
     }
   }
 
-  function handleSkip() {
-    localStorage.setItem(STORAGE_KEY, "true");
-    setOpen(false);
-  }
-
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
-        <button
-          onClick={handleSkip}
-          className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setOpen(false)}
         >
-          <X className="h-5 w-5" />
-        </button>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 overflow-y-auto max-h-[90vh]"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-indigo-600" />
+                <h2 className="text-lg font-bold">Welcome to AdmitFlow!</h2>
+              </div>
+              <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-        <div className="text-center mb-6">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 mb-3">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <h2 className="text-lg font-bold">Welcome to AdmitFlow</h2>
-          <p className="text-sm text-gray-500 mt-1">Help us improve — tell us a bit about yourself</p>
-        </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Help us improve. Share a bit about yourself (optional).
+            </p>
 
-        {done ? (
-          <div className="text-center py-8">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-600 mb-3">
-              <Send className="h-6 w-6" />
-            </div>
-            <p className="font-medium text-green-700 dark:text-green-400">Thanks, {name}!</p>
-            <p className="text-sm text-gray-500 mt-1">You're all set.</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Name *</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="Your name"
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 XXXXX XXXXX"
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">How did you find us?</label>
-              <select
-                value={referralSource}
-                onChange={(e) => setReferralSource(e.target.value)}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700"
-              >
-                <option value="">Select...</option>
-                {referralOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name *" required className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700" />
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700" />
+              <select value={referralSource} onChange={(e) => setReferralSource(e.target.value)} className="w-full rounded-lg border px-3 py-2.5 text-sm dark:bg-gray-800 dark:border-gray-700">
+                <option value="">How did you find us? (optional)</option>
+                {referralOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
               </select>
               {referralSource === "Other" && (
-                <input
-                  type="text"
-                  value={customSource}
-                  onChange={(e) => setCustomSource(e.target.value)}
-                  placeholder="Tell us how..."
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm mt-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700"
-                />
+                <input type="text" value={customSource} onChange={(e) => setCustomSource(e.target.value)} placeholder="Please specify..." className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700" />
               )}
-            </div>
-            <button
-              type="submit"
-              disabled={submitting || !name.trim()}
-              className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {submitting ? "Submitting..." : "Get Started"}
-            </button>
-            <button
-              type="button"
-              onClick={handleSkip}
-              className="w-full text-xs text-gray-400 hover:text-gray-600 py-1"
-            >
-              Skip for now
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+              <button type="submit" disabled={submitting || !name.trim()} className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                {submitting ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : done ? "You're all set!" : "Submit"}
+              </button>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

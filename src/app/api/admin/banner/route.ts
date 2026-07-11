@@ -8,8 +8,8 @@ export async function GET() {
 
   try {
     const banners = await prisma.broadcastMessage.findMany({
+      where: { active: true },
       orderBy: { createdAt: "desc" },
-      take: 10,
     });
     return NextResponse.json(banners);
   } catch (err) {
@@ -25,8 +25,6 @@ export async function POST(req: NextRequest) {
   try {
     const { message } = await req.json();
     if (!message?.trim()) return NextResponse.json({ error: "Message is required" }, { status: 400 });
-
-    await prisma.broadcastMessage.updateMany({ where: { active: true }, data: { active: false } });
 
     const banner = await prisma.broadcastMessage.create({
       data: { message: message.trim() },
@@ -47,7 +45,7 @@ export async function DELETE() {
     await prisma.broadcastMessage.updateMany({ where: { active: true }, data: { active: false } });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Delete banner error:", err);
+    console.error("Delete banners error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

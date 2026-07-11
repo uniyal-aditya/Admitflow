@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   Bell, BookOpen, CalendarDays, Clock, Download,
   GraduationCap, Megaphone, Star, TrendingUp, AlertTriangle,
@@ -16,6 +17,15 @@ import { colleges } from "@/data/colleges";
 import { getActiveNotices, getUpcomingDeadlines, getRecentNotices } from "@/data/notices";
 import { getFavorites, getDownloads, getNotifications } from "@/lib/store";
 import { formatDate, daysUntil, getCollegeName } from "@/lib/utils";
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.06 } },
+} as const;
+
+const fadeSlide = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } },
+} as const;
 
 export default function DashboardPage() {
   const [favorites] = useState(getFavorites());
@@ -60,26 +70,28 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      <div>
+    <motion.div initial="initial" animate="animate" variants={stagger} className="space-y-8">
+      <motion.div variants={fadeSlide}>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           Welcome back! Here&apos;s what&apos;s happening with Uttarakhand college admissions.
         </p>
-      </div>
+      </motion.div>
 
-      <div className="max-w-xl">
+      <motion.div variants={fadeSlide} className="max-w-xl">
         <SearchBar />
-      </div>
+      </motion.div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <StatsCard key={s.title} {...s} />
+      <motion.div variants={fadeSlide} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {stats.map((s, i) => (
+          <motion.div key={s.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}>
+            <StatsCard {...s} />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+        <motion.div variants={fadeSlide} className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -93,13 +105,15 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {activeNotices.slice(0, 5).map((notice) => (
-              <NoticeCard key={notice.id} notice={notice} />
+            {activeNotices.slice(0, 5).map((notice, i) => (
+              <motion.div key={notice.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.05 }}>
+                <NoticeCard notice={notice} />
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="space-y-6">
+        <motion.div variants={fadeSlide} className="space-y-6">
           {favorites.length > 0 && (
             <div className="space-y-3">
               <h2 className="font-semibold text-lg flex items-center gap-2">
@@ -183,8 +197,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

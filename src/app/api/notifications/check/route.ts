@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { notices } from "@/data/notices";
 import { sendPushToUser } from "@/lib/webpush";
 import nodemailer from "nodemailer";
+import { emailTemplate } from "@/lib/email-template";
 
 export async function POST() {
   const session = await getSession();
@@ -81,26 +82,21 @@ export async function POST() {
           auth: { user: smtpUser, pass: smtpPass },
         });
 
-        const noticeList = matching.slice(0, 5).map((n) =>
-          `<li><a href="${process.env.NEXT_PUBLIC_URL || "https://admitflowin.vercel.app"}/notices/${n.id}" style="color:#4f46e5">${n.title}</a></li>`
-        ).join("");
+        const noticeLinks = matching.slice(0, 5).map((n) => ({
+          title: n.title,
+          url: `${process.env.NEXT_PUBLIC_URL || "https://admitflowin.vercel.app"}/notices/${n.id}`,
+        }));
 
         await transporter.sendMail({
           from: `"AdmitFlow" <${process.env.SMTP_FROM || smtpUser}>`,
           to: user.email,
           subject: `New notices match your preferences (${matching.length})`,
-          html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-            <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px;border-radius:12px 12px 0 0;text-align:center">
-              <h1 style="color:white;margin:0;font-size:20px">AdmitFlow</h1>
-            </div>
-            <div style="border:1px solid #e5e7eb;border-top:0;padding:24px;border-radius:0 0 12px 12px">
-              <h2 style="margin-top:0;color:#111827;font-size:18px">${matching.length} new notice${matching.length > 1 ? "s" : ""} for you</h2>
-              <ul>${noticeList}</ul>
-              ${matching.length > 5 ? `<p style="color:#6b7280">...and ${matching.length - 5} more</p>` : ""}
-              <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
-              <p style="color:#9ca3af;font-size:12px;margin:0">Manage preferences in AdmitFlow settings.</p>
-            </div>
-          </div>`,
+          html: emailTemplate(
+            `${matching.length} new notice${matching.length > 1 ? "s" : ""} for you`,
+            `We found new notices matching your preferences from your favorite colleges.`,
+            undefined,
+            noticeLinks
+          ),
         });
       }
     }

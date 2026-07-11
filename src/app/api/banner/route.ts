@@ -3,13 +3,13 @@ import { prisma } from "@/lib/db/prisma";
 
 export async function GET() {
   try {
-    const banner = await prisma.broadcastMessage.findFirst({
+    const banners = await prisma.broadcastMessage.findMany({
       where: { active: true },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(banner ? { message: banner.message, id: banner.id } : null);
+    return NextResponse.json(banners.map((b) => ({ id: b.id, message: b.message })));
   } catch {
-    return NextResponse.json(null);
+    return NextResponse.json([]);
   }
 }

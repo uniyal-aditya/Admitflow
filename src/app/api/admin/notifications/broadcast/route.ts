@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { sendPushToUser } from "@/lib/webpush";
+import { emailTemplate } from "@/lib/email-template";
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
@@ -82,18 +83,7 @@ export async function POST(req: NextRequest) {
               to: recipient.email,
               subject: `[AdmitFlow] ${title}`,
               text: `${message || title}\n\n${url ? `View details: ${url}\n` : ""}You are receiving this because you enabled email notifications in AdmitFlow settings.`,
-              html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-                <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px;border-radius:12px 12px 0 0;text-align:center">
-                  <h1 style="color:white;margin:0;font-size:20px">AdmitFlow</h1>
-                </div>
-                <div style="border:1px solid #e5e7eb;border-top:0;padding:24px;border-radius:0 0 12px 12px">
-                  <h2 style="margin-top:0;color:#111827;font-size:18px">${title}</h2>
-                  <p style="color:#4b5563;line-height:1.6">${message || title}</p>
-                  ${url ? `<a href="${url}" style="display:inline-block;background:#4f46e5;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;margin-top:12px">View Details</a>` : ""}
-                  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
-                  <p style="color:#9ca3af;font-size:12px;margin:0">You received this because email notifications are enabled in your AdmitFlow settings.</p>
-                </div>
-              </div>`,
+              html: emailTemplate(title, message || title, url || undefined),
             });
             emailsSent++;
           } catch (err) {
