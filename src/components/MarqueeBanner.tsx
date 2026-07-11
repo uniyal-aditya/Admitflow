@@ -23,7 +23,7 @@ export function MarqueeBanner() {
   if (banners.length === 0 || dismissed) return null;
 
   const count = banners.length;
-  const speed = count <= 2 ? 20 : count <= 4 ? 35 : 50;
+  const speed = count <= 2 ? 5 : 10;
 
   return (
     <AnimatePresence>
