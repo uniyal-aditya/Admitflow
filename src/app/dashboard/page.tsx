@@ -23,6 +23,10 @@ export default function DashboardPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  useEffect(() => {
+    fetch("/api/notifications/check", { method: "POST" }).catch(() => {});
+  }, []);
+
   const activeNotices = getActiveNotices();
   const upcomingDeadlines = getUpcomingDeadlines();
   const recentNotices = getRecentNotices(7);

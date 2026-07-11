@@ -75,6 +75,18 @@ export default function SettingsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!settings.deviceNotifications && !settings.emailNotifications) return;
+    const check = async () => {
+      try {
+        await fetch("/api/notifications/check", { method: "POST" });
+      } catch {}
+    };
+    check();
+    const interval = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [settings.deviceNotifications, settings.emailNotifications]);
+
   if (!mounted) return null;
 
   const stats = [
@@ -145,8 +157,89 @@ export default function SettingsPage() {
           Notification Preferences
         </h2>
         <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800 space-y-6">
+
           <div>
-            <p className="text-sm text-gray-500 mb-4">Select which notice types you want to be notified about</p>
+            <p className="font-medium mb-3 flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-indigo-600" />
+              Notification Channels
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={`rounded-lg border p-4 ${settings.emailNotifications ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settings.emailNotifications ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>
+                    {settings.emailNotifications ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <input
+                  type="email"
+                  value={settings.email || ""}
+                  onChange={(e) => update({ email: e.target.value })}
+                  placeholder="your@email.com"
+                  className="w-full rounded-lg border bg-white/50 px-3 py-1.5 text-xs mb-2 dark:bg-gray-900 dark:border-gray-700"
+                />
+                <label className="flex items-center gap-2 cursor-pointer text-xs">
+                  <input
+                    type="checkbox"
+                    checked={settings.emailNotifications}
+                    onChange={(e) => update({ emailNotifications: e.target.checked })}
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  Receive email alerts
+                </label>
+              </div>
+              <div className={`rounded-lg border p-4 ${settings.deviceNotifications ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Smartphone className="h-4 w-4" />
+                    Push
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settings.deviceNotifications ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>
+                    {settings.deviceNotifications ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-2">
+                  {isSubscribed
+                    ? "Push subscription active"
+                    : notifStatus === "denied"
+                      ? "Blocked — update browser settings"
+                      : !swReady
+                        ? "Initializing..."
+                        : "Get real-time alerts"}
+                </p>
+                {!isSubscribed && notifStatus !== "denied" && swReady && (
+                  <button
+                    onClick={requestDeviceNotif}
+                    disabled={subscribing}
+                    className="w-full rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {subscribing ? "Enabling..." : "Enable Push"}
+                  </button>
+                )}
+                {isSubscribed && (
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={settings.deviceNotifications}
+                      onChange={(e) => toggleDeviceNotif(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Show push notifications
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 dark:border-gray-700">
+            <p className="font-medium mb-3 flex items-center gap-2">
+              <Bell className="h-4 w-4 text-indigo-600" />
+              Notice Types
+            </p>
+            <p className="text-sm text-gray-500 mb-4">Select which notice types trigger notifications</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {allNoticeTypes.map((type) => (
                 <label
@@ -167,71 +260,6 @@ export default function SettingsPage() {
                 </label>
               ))}
             </div>
-          </div>
-
-          <div className="border-t pt-4 dark:border-gray-700">
-            <p className="font-medium mb-3 flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Email Notifications
-            </p>
-            <div className="space-y-3">
-              <input
-                type="email"
-                value={settings.email || ""}
-                onChange={(e) => update({ email: e.target.value })}
-                placeholder="your@email.com"
-                className="w-full rounded-lg border bg-white/50 px-3 py-2 text-sm dark:bg-gray-900 dark:border-gray-700"
-              />
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.emailNotifications}
-                  onChange={(e) => update({ emailNotifications: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm">Send email alerts for selected notice types</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="border-t pt-4 dark:border-gray-700">
-            <p className="font-medium mb-3 flex items-center gap-2">
-              <Smartphone className="h-4 w-4" />
-              Device Notifications
-            </p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  {isSubscribed
-                    ? "Push notifications are active"
-                    : notifStatus === "denied"
-                      ? "Notifications blocked — update browser settings"
-                      : !swReady
-                        ? "Initializing..."
-                        : "Allow browser notifications for real-time alerts"}
-                </p>
-              </div>
-              {!isSubscribed && notifStatus !== "denied" && swReady && (
-                <button
-                  onClick={requestDeviceNotif}
-                  disabled={subscribing}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {subscribing ? "Enabling..." : "Enable"}
-                </button>
-              )}
-            </div>
-            {isSubscribed && (
-              <label className="flex items-center gap-3 mt-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.deviceNotifications}
-                  onChange={(e) => toggleDeviceNotif(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm">Show push notifications for new notices</span>
-              </label>
-            )}
           </div>
         </div>
       </section>

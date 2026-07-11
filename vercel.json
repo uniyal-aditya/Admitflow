@@ -2,5 +2,11 @@
   "framework": "nextjs",
   "buildCommand": "npx prisma generate && next build",
   "installCommand": "npm install",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/data/verify",
+      "schedule": "*/10 * * * *"
+    }
+  ]
 }

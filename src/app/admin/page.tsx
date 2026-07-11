@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Users, Heart, Download, Bell, Lightbulb, BellDot,
   Building2, FileText, Activity, Loader2, ChevronRight,
-  CheckCircle, XCircle, Clock, BookOpen,
+  CheckCircle, XCircle, Clock, BookOpen, Shield,
 } from "lucide-react";
 
 type Stats = {
@@ -90,6 +90,17 @@ export default function AdminPage() {
   }
 
   const { data, db } = stats;
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  const runVerify = async () => {
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/data/verify");
+      if (res.ok) setVerifyResult(await res.json());
+    } catch {}
+    setVerifying(false);
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -116,6 +127,46 @@ export default function AdminPage() {
         <StatCard icon={Bell} label="Notifications" value={db.notifications.total} sub={`${db.notifications.unread} unread`} color="bg-amber-600" />
         <StatCard icon={Lightbulb} label="Suggestions" value={db.suggestions.total} sub={`${db.suggestions.pending} pending`} color="bg-teal-600" />
         <StatCard icon={BellDot} label="Push Subs" value={db.pushSubscriptions} color="bg-cyan-600" />
+      </div>
+
+      {/* Data Verification */}
+      <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4" /> AI Data Verification</h2>
+          <div className="flex items-center gap-2">
+            {verifyResult?.lastVerified && (
+              <span className="text-xs text-gray-400">Last: {new Date(verifyResult.lastVerified).toLocaleTimeString()}</span>
+            )}
+            <button onClick={runVerify} disabled={verifying} className="text-xs rounded-lg bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700 disabled:opacity-50">
+              {verifying ? "Verifying..." : "Run Check"}
+            </button>
+          </div>
+        </div>
+        {verifyResult && (
+          <div className="text-sm space-y-2">
+            <div className="flex gap-4 text-xs">
+              <span className="text-green-600">{verifyResult.verifiedOk || 0} items verified OK</span>
+              <span className="text-amber-600">{verifyResult.issues?.length || 0} issues found</span>
+              <span className="text-gray-500">{verifyResult.collegesChecked || 0} colleges · {verifyResult.noticesChecked || 0} notices</span>
+            </div>
+            {verifyResult.issues?.length > 0 && (
+              <div className="mt-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 space-y-2">
+                {verifyResult.issues.slice(0, 5).map((issue: any, i: number) => (
+                  <div key={i} className="text-xs">
+                    <span className="font-medium">{issue.item}</span> — {issue.issue}
+                    {issue.suggestedFix && <span className="text-indigo-600"> → {issue.suggestedFix}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {verifyResult.sourcesChecked?.length > 0 && (
+              <div className="text-xs text-gray-400">Sources: {verifyResult.sourcesChecked.join(", ")}</div>
+            )}
+          </div>
+        )}
+        {!verifyResult && !verifying && (
+          <p className="text-xs text-gray-400">Click "Run Check" to verify college/notice/timeline data accuracy using AI.</p>
+        )}
       </div>
 
       {/* Data Breakdown */}

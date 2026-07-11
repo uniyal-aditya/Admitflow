@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Send, Bell, Mail, Smartphone, Users } from "lucide-react";
+import { Loader2, Send, Bell, Mail, Smartphone, Users, Megaphone, Trash2 } from "lucide-react";
 
 const noticeTypes = ["admission", "registration", "counselling", "spot_round", "vacant_seat", "merit_list", "waiting_list", "fee_payment", "reporting", "extension", "general"];
 
@@ -21,6 +21,12 @@ export default function NotificationsPage() {
   const [pushChannel, setPushChannel] = useState(true);
   const [emailChannel, setEmailChannel] = useState(false);
 
+  const [bannerMsg, setBannerMsg] = useState("");
+  const [bannerSubmitting, setBannerSubmitting] = useState(false);
+  const [bannerResult, setBannerResult] = useState("");
+  const [activeBanner, setActiveBanner] = useState<string | null>(null);
+  const [bannerHistory, setBannerHistory] = useState<any[]>([]);
+
   useEffect(() => {
     fetch("/api/admin/users")
       .then((r) => r.json())
@@ -34,7 +40,40 @@ export default function NotificationsPage() {
         }
       })
       .catch(() => {});
+    fetch("/api/admin/banner")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) { setBannerHistory(data); const active = data.find((b: any) => b.active); if (active) setActiveBanner(active.message); } })
+      .catch(() => {});
   }, []);
+
+  async function handleSetBanner() {
+    if (!bannerMsg.trim()) return;
+    setBannerSubmitting(true);
+    setBannerResult("");
+    try {
+      const res = await fetch("/api/admin/banner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: bannerMsg.trim() }),
+      });
+      if (res.status === 401) { router.push("/"); return; }
+      if (!res.ok) throw new Error("Failed");
+      setActiveBanner(bannerMsg.trim());
+      setBannerResult("Banner updated!");
+      setBannerMsg("");
+      const hist = await fetch("/api/admin/banner").then((r) => r.json());
+      if (Array.isArray(hist)) setBannerHistory(hist);
+    } catch { setBannerResult("Failed to set banner"); }
+    finally { setBannerSubmitting(false); }
+  }
+
+  async function handleClearBanner() {
+    try {
+      await fetch("/api/admin/banner", { method: "DELETE" });
+      setActiveBanner(null);
+      setBannerResult("Banner cleared");
+    } catch {}
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -209,6 +248,51 @@ export default function NotificationsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="font-semibold flex items-center gap-2 mb-4">
+          <Megaphone className="h-5 w-5" />
+          Site Banner
+        </h2>
+        {activeBanner && (
+          <div className="mb-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 p-3 text-sm dark:from-indigo-950/30 dark:to-purple-950/30">
+            <p className="text-xs text-gray-500 mb-1">Active banner:</p>
+            <p className="font-medium">{activeBanner}</p>
+            <button onClick={handleClearBanner} className="text-xs text-red-500 hover:underline mt-1">Clear banner</button>
+          </div>
+        )}
+        {bannerResult && <p className="text-sm text-green-600 mb-2">{bannerResult}</p>}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={bannerMsg}
+            onChange={(e) => setBannerMsg(e.target.value)}
+            placeholder="Enter banner announcement text..."
+            className="flex-1 rounded-lg border px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700"
+          />
+          <button
+            onClick={handleSetBanner}
+            disabled={bannerSubmitting || !bannerMsg.trim()}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {bannerSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Set Banner"}
+          </button>
+        </div>
+        {bannerHistory.length > 1 && (
+          <div className="mt-3 pt-3 border-t dark:border-gray-700">
+            <p className="text-xs text-gray-500 mb-2">History ({bannerHistory.length})</p>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {bannerHistory.map((b: any) => (
+                <div key={b.id} className="flex items-center gap-2 text-xs">
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${b.active ? "bg-green-500" : "bg-gray-300"}`} />
+                  <span className="text-gray-600 dark:text-gray-400 truncate">{b.message}</span>
+                  <span className="text-gray-400 shrink-0">{new Date(b.createdAt).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

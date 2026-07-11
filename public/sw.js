@@ -5,7 +5,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "AdmitFlow", body: "", icon: "/icon-192.png", badge: "/icon-192.png", url: "/" };
+  let data = { title: "AdmitFlow", body: "", icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", url: "/" };
   try {
     if (event.data) {
       const parsed = event.data.json();
