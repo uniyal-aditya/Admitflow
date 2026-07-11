@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { Loader2, ArrowLeft, Plus, Trash2, Search } from "lucide-react"
 import Link from "next/link"
 
 const noticeTypes = ["admission", "registration", "counselling", "spot_round", "vacant_seat", "merit_list", "waiting_list", "fee_payment", "reporting", "extension", "general"]
@@ -15,6 +15,9 @@ export default function EditNoticePage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [colleges, setColleges] = useState<{ id: string; name: string; shortName: string }[]>([])
+  const [collegeSearch, setCollegeSearch] = useState("")
+  const [collegeDropdownOpen, setCollegeDropdownOpen] = useState(false)
 
   const [title, setTitle] = useState("")
   const [form, setForm] = useState({
@@ -38,6 +41,10 @@ export default function EditNoticePage() {
 
   useEffect(() => {
     fetchNotice()
+    fetch("/api/admin/colleges")
+      .then((r) => r.json())
+      .then((data) => setColleges(data.colleges || data || []))
+      .catch(() => {})
   }, [id])
 
   async function fetchNotice() {
@@ -224,15 +231,66 @@ export default function EditNoticePage() {
             <p className="text-xs text-gray-500 mt-1">ID: {id}</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">College ID *</label>
-            <input
-              type="text"
-              required
-              value={form.collegeId}
-              onChange={(e) => setField("collegeId", e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="relative">
+            <label className="block text-sm font-medium mb-1">College *</label>
+            <button
+              type="button"
+              onClick={() => setCollegeDropdownOpen(!collegeDropdownOpen)}
+              className="w-full px-3 py-2 border rounded-lg text-sm text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {form.collegeId
+                ? colleges.find((c) => c.id === form.collegeId)?.name || form.collegeId
+                : "Select a college..."}
+            </button>
+            {collegeDropdownOpen && (
+              <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border rounded-lg shadow-lg max-h-60 overflow-auto">
+                <div className="sticky top-0 bg-white dark:bg-gray-900 p-2 border-b">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search colleges..."
+                      value={collegeSearch}
+                      onChange={(e) => setCollegeSearch(e.target.value)}
+                      className="w-full pl-8 pr-2 py-1.5 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                {colleges
+                  .filter(
+                    (c) =>
+                      c.name.toLowerCase().includes(collegeSearch.toLowerCase()) ||
+                      c.shortName.toLowerCase().includes(collegeSearch.toLowerCase()) ||
+                      c.id.toLowerCase().includes(collegeSearch.toLowerCase())
+                  )
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setField("collegeId", c.id)
+                        setCollegeDropdownOpen(false)
+                        setCollegeSearch("")
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                        form.collegeId === c.id ? "bg-blue-50 dark:bg-blue-950 font-medium" : ""
+                      }`}
+                    >
+                      <span className="block">{c.name}</span>
+                      <span className="block text-xs text-gray-400">{c.shortName} — {c.id}</span>
+                    </button>
+                  ))}
+                {colleges.filter(
+                  (c) =>
+                    c.name.toLowerCase().includes(collegeSearch.toLowerCase()) ||
+                    c.shortName.toLowerCase().includes(collegeSearch.toLowerCase()) ||
+                    c.id.toLowerCase().includes(collegeSearch.toLowerCase())
+                ).length === 0 && (
+                  <div className="px-3 py-4 text-sm text-gray-400 text-center">No colleges found</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

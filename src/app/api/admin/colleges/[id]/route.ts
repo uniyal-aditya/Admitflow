@@ -40,7 +40,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
+    const college = await prisma.college.findUnique({ where: { id } });
+    if (!college) return NextResponse.json({ error: "College not found" }, { status: 404 });
+
     await prisma.college.delete({ where: { id } });
+
+    await prisma.adminLog.create({
+      data: {
+        action: "delete_college",
+        details: `Deleted college "${college.name}" (${id})`,
+        adminEmail: admin.email,
+      },
+    });
+
     return NextResponse.json({ message: "College deleted" });
   } catch (error) {
     console.error("Error deleting college:", error);

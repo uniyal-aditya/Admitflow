@@ -40,7 +40,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
+    const notice = await prisma.notice.findUnique({ where: { id }, include: { college: true } });
+    if (!notice) return NextResponse.json({ error: "Notice not found" }, { status: 404 });
+
     await prisma.notice.delete({ where: { id } });
+
+    await prisma.adminLog.create({
+      data: {
+        action: "delete_notice",
+        details: `Deleted notice "${notice.title}" (${id}) for college ${notice.college?.shortName || notice.collegeId}`,
+        adminEmail: admin.email,
+      },
+    });
+
     return NextResponse.json({ message: "Notice deleted" });
   } catch (error) {
     console.error("Error deleting notice:", error);

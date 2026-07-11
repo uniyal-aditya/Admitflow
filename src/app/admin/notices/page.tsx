@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Loader2, Search } from "lucide-react"
 
 interface Notice {
   id: string
@@ -18,12 +18,27 @@ interface Notice {
 export default function NoticesPage() {
   const router = useRouter()
   const [notices, setNotices] = useState<Notice[]>([])
+  const [filtered, setFiltered] = useState<Notice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [search, setSearch] = useState("")
 
   useEffect(() => {
     fetchNotices()
   }, [])
+
+  useEffect(() => {
+    const q = search.toLowerCase()
+    setFiltered(
+      notices.filter(
+        (n) =>
+          n.title.toLowerCase().includes(q) ||
+          n.type.toLowerCase().includes(q) ||
+          n.status.toLowerCase().includes(q) ||
+          (n.college?.shortName || n.collegeId).toLowerCase().includes(q)
+      )
+    )
+  }, [search, notices])
 
   async function fetchNotices() {
     try {
@@ -46,10 +61,7 @@ export default function NoticesPage() {
     if (!confirm("Are you sure you want to delete this notice?")) return
     try {
       const res = await fetch(`/api/admin/notices/${id}`, { method: "DELETE" })
-      if (res.status === 401) {
-        router.push("/")
-        return
-      }
+      if (res.status === 401) { router.push("/"); return }
       if (!res.ok) throw new Error("Failed to delete")
       setNotices((prev) => prev.filter((n) => n.id !== id))
     } catch {
@@ -59,14 +71,10 @@ export default function NoticesPage() {
 
   function statusColor(status: string) {
     switch (status) {
-      case "active":
-        return "bg-green-100 text-green-700"
-      case "upcoming":
-        return "bg-yellow-100 text-yellow-700"
-      case "expired":
-        return "bg-gray-100 text-gray-500"
-      default:
-        return "bg-gray-100 text-gray-500"
+      case "active": return "bg-green-100 text-green-700"
+      case "upcoming": return "bg-yellow-100 text-yellow-700"
+      case "expired": return "bg-gray-100 text-gray-500"
+      default: return "bg-gray-100 text-gray-500"
     }
   }
 
@@ -91,12 +99,23 @@ export default function NoticesPage() {
         </Link>
       </div>
 
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search notices by title, type, status, college..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-md pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>
       )}
 
-      {notices.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">No notices found</div>
+      {filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">{search ? "No notices match your search" : "No notices found"}</div>
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
@@ -111,7 +130,7 @@ export default function NoticesPage() {
               </tr>
             </thead>
             <tbody>
-              {notices.map((notice) => (
+              {filtered.map((notice) => (
                 <tr key={notice.id} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-3 font-medium max-w-[200px] truncate">{notice.title}</td>
                   <td className="px-4 py-3 text-gray-600">{notice.college?.shortName || notice.collegeId}</td>

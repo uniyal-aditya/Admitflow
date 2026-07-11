@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Loader2, Search } from "lucide-react"
 
 interface College {
   id: string
@@ -17,12 +17,29 @@ interface College {
 export default function CollegesPage() {
   const router = useRouter()
   const [colleges, setColleges] = useState<College[]>([])
+  const [filtered, setFiltered] = useState<College[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [search, setSearch] = useState("")
 
   useEffect(() => {
     fetchColleges()
   }, [])
+
+  useEffect(() => {
+    const q = search.toLowerCase()
+    setFiltered(
+      colleges.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.shortName.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q) ||
+          c.type.toLowerCase().includes(q) ||
+          c.ownership.toLowerCase().includes(q) ||
+          c.district.toLowerCase().includes(q)
+      )
+    )
+  }, [search, colleges])
 
   async function fetchColleges() {
     try {
@@ -45,10 +62,7 @@ export default function CollegesPage() {
     if (!confirm("Are you sure you want to delete this college?")) return
     try {
       const res = await fetch(`/api/admin/colleges/${id}`, { method: "DELETE" })
-      if (res.status === 401) {
-        router.push("/")
-        return
-      }
+      if (res.status === 401) { router.push("/"); return }
       if (!res.ok) throw new Error("Failed to delete")
       setColleges((prev) => prev.filter((c) => c.id !== id))
     } catch {
@@ -77,12 +91,23 @@ export default function CollegesPage() {
         </Link>
       </div>
 
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search colleges by name, ID, type, district..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-md pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>
       )}
 
-      {colleges.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">No colleges found</div>
+      {filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">{search ? "No colleges match your search" : "No colleges found"}</div>
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-lg border overflow-x-auto">
           <table className="w-full text-sm">
@@ -97,7 +122,7 @@ export default function CollegesPage() {
               </tr>
             </thead>
             <tbody>
-              {colleges.map((college) => (
+              {filtered.map((college) => (
                 <tr key={college.id} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-3 font-mono text-xs">{college.id}</td>
                   <td className="px-4 py-3 font-medium">{college.name}</td>
