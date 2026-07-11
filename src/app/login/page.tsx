@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const errorParam = searchParams.get("error");
   const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/dashboard";
   const { googleLogin, user, loading: authLoading } = useAuth();
   const [error, setError] = useState("");
@@ -25,66 +26,54 @@ export default function LoginPage() {
   }, [user, authLoading, router, safeRedirect]);
 
   useEffect(() => {
-    const google = (window as any).google;
-    if (!google?.accounts?.id) return;
+    if (errorParam === "config") setError("Authentication configuration error. Please try again later.");
+    else if (errorParam === "denied") setError("Sign in was cancelled.");
+    else if (errorParam === "auth_failed" || errorParam === "no_token" || errorParam === "invalid_token") setError("Authentication failed. Please try again.");
+    else if (errorParam === "server") setError("A server error occurred. Please try again.");
+  }, [errorParam]);
 
-    google.accounts.id.initialize({
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      cancel_on_tap_outside: false,
-      callback: async (response: { credential: string }) => {
-        if (!mountedRef.current) return;
-        setSigningIn(true);
-        setError("");
-        const result = await googleLogin(response.credential);
-        if (!mountedRef.current) return;
-        setSigningIn(false);
-        if (result.error) {
-          setError(result.error);
-        }
-      },
-    });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (signingIn || error) return;
+    const timer = setTimeout(() => {
+      const google = (window as any).google;
+      if (!google?.accounts?.id) return;
 
-    google.accounts.id.prompt();
-
-    const btn = document.getElementById("google-signin-btn");
-    if (btn) {
-      google.accounts.id.renderButton(btn, {
-        type: "standard",
-        shape: "pill",
-        theme: "outline",
-        text: "signin_with",
-        size: "large",
-        width: btn.offsetWidth || 320,
-        logo_alignment: "left",
+      google.accounts.id.initialize({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+        cancel_on_tap_outside: false,
+        callback: async (response: { credential: string }) => {
+          if (!mountedRef.current) return;
+          setSigningIn(true);
+          setError("");
+          const result = await googleLogin(response.credential);
+          if (!mountedRef.current) return;
+          setSigningIn(false);
+          if (result.error) setError(result.error);
+        },
       });
-    }
+
+      google.accounts.id.prompt();
+
+      const btn = document.getElementById("google-signin-btn");
+      if (btn) {
+        google.accounts.id.renderButton(btn, {
+          type: "standard",
+          shape: "pill",
+          theme: "outline",
+          text: "signin_with",
+          size: "large",
+          width: btn.offsetWidth || 320,
+          logo_alignment: "left",
+        });
+      }
+    }, 500);
 
     return () => {
-      try { google.accounts.id.cancel(); } catch {}
+      clearTimeout(timer);
+      try { if ((window as any).google?.accounts?.id) (window as any).google.accounts.id.cancel(); } catch {}
     };
-  }, [googleLogin]);
-
-  const handleManualSignIn = async () => {
-    setSigningIn(true);
-    setError("");
-    try {
-      const google = (window as any).google;
-      if (!google?.accounts?.id) {
-        setError("Google Sign-In is not available. Please refresh the page.");
-        setSigningIn(false);
-        return;
-      }
-      google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setError("Please enable popups for this site or try a different browser.");
-          setSigningIn(false);
-        }
-      });
-    } catch {
-      setError("Failed to initialize Google Sign-In.");
-      setSigningIn(false);
-    }
-  };
+  }, [googleLogin, signingIn, error]);
 
   if (authLoading || user) {
     return (
@@ -101,7 +90,6 @@ export default function LoginPage() {
           <ArrowLeft className="h-4 w-4" /> Back to home
         </Link>
 
-        {/* Welcome card */}
         <div className="rounded-2xl border bg-white p-8 shadow-xl dark:bg-gray-900 dark:border-gray-800">
           <div className="text-center mb-8">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/25 mb-5">
@@ -115,19 +103,17 @@ export default function LoginPage() {
 
           {error && (
             <div role="alert" className="mb-5 rounded-xl bg-red-50 border border-red-100 p-3.5 text-sm text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400 flex items-start gap-2.5">
-              <span className="mt-0.5 shrink-0">⚠️</span>
+              <span className="mt-0.5 shrink-0">&#x26A0;&#xFE0F;</span>
               <span>{error}</span>
             </div>
           )}
 
-          {/* Google Sign-In */}
           <div className="space-y-4">
             <div id="google-signin-btn" className="w-full flex justify-center min-h-[44px]"></div>
 
-            <button
-              onClick={handleManualSignIn}
-              disabled={signingIn}
-              className="w-full rounded-xl border-2 px-5 py-3 text-sm font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 disabled:opacity-50 transition-all dark:border-gray-700 dark:hover:bg-gray-800"
+            <a
+              href={`/api/auth/google/authorize?redirect=${encodeURIComponent(safeRedirect)}`}
+              className={`w-full rounded-xl border-2 px-5 py-3 text-sm font-semibold flex items-center justify-center gap-3 hover:bg-gray-50 disabled:opacity-50 transition-all dark:border-gray-700 dark:hover:bg-gray-800 ${signingIn ? "pointer-events-none opacity-50" : ""}`}
             >
               {signingIn ? (
                 <Loader className="h-5 w-5 animate-spin" />
@@ -140,16 +126,14 @@ export default function LoginPage() {
                 </svg>
               )}
               {signingIn ? "Signing in..." : "Continue with Google"}
-            </button>
+            </a>
           </div>
 
-          {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t dark:border-gray-700"></div></div>
             <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-3 text-gray-400 dark:bg-gray-900">Free forever — no email or password needed</span></div>
           </div>
 
-          {/* Features quick-list */}
           <div className="grid grid-cols-2 gap-3 text-xs text-gray-500">
             {[
               "Track 30+ colleges",
@@ -165,7 +149,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="mt-6 text-center text-xs text-gray-400">
           By signing in, you agree to our{" "}
           <Link href="/tos" className="underline hover:text-gray-600 dark:hover:text-gray-300">Terms of Service</Link>{" "}
