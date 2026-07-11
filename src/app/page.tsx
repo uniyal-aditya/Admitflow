@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -9,6 +10,7 @@ import {
   Menu, X, Moon, Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/components/AuthProvider";
 
 const features = [
   {
@@ -58,8 +60,22 @@ const stagger = {
 };
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!loading && user) router.replace("/dashboard");
+  }, [user, loading, router]);
+
+  if (loading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -79,7 +95,7 @@ export default function LandingPage() {
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:rotate-90 dark:scale-0" />
               <Moon className="h-5 w-5 absolute inset-0 m-auto rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </button>
-            <Link href="/dashboard" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">Get Started</Link>
+            <Link href="/login" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">Get Started</Link>
           </div>
           <div className="flex md:hidden items-center gap-2">
             <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle dark mode"
@@ -95,7 +111,7 @@ export default function LandingPage() {
           <div className="border-t px-4 py-3 md:hidden bg-white dark:bg-gray-950 dark:border-gray-800">
             <div className="flex flex-col gap-2">
               <Link href="/about" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">About</Link>
-              <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white text-center hover:bg-indigo-700 transition-colors">Get Started</Link>
+              <Link href="/login" onClick={() => setMobileOpen(false)} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white text-center hover:bg-indigo-700 transition-colors">Get Started</Link>
             </div>
           </div>
         )}
@@ -119,7 +135,7 @@ export default function LandingPage() {
             Uttarakhand government colleges in one place. Stop visiting 10 websites every day.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/25">
+            <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/25">
               Get Started Free <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/about" className="inline-flex items-center gap-2 rounded-xl border px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
@@ -185,7 +201,7 @@ export default function LandingPage() {
               Free forever. No ads. No tracking.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-gray-100 transition-colors">
+              <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-gray-100 transition-colors">
                 Get Started Free <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

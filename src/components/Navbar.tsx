@@ -16,15 +16,20 @@ import {
   Sun,
   Download,
   Shield,
+  User,
+  LogOut,
+  MessageCircle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { getUnreadCount } from "@/lib/store";
 import { useInstallApp } from "@/hooks/useInstallApp";
+import { useAuth } from "@/components/AuthProvider";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: GraduationCap },
   { href: "/colleges", label: "Colleges", icon: BookOpen },
   { href: "/notices", label: "Notices", icon: Bell },
+  { href: "/community", label: "Community", icon: MessageCircle },
   { href: "/search", label: "Search", icon: Search },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -36,6 +41,8 @@ export function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { canInstall, install } = useInstallApp();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const { user, loading, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     setUnreadCount(getUnreadCount());
@@ -58,6 +65,16 @@ export function Navbar() {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".profile-menu") && !target.closest('[aria-label="Profile"]')) setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileOpen]);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
@@ -112,6 +129,54 @@ export function Navbar() {
               <Download className="h-3.5 w-3.5" />
               Install
             </button>
+          )}
+
+          {user && (
+            <div className="relative profile-menu">
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="rounded-full overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-colors"
+                aria-label="Profile"
+              >
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-bold">
+                    {(user.name || user.email)[0].toUpperCase()}
+                  </div>
+                )}
+              </button>
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute right-0 mt-2 w-48 rounded-xl border bg-white shadow-lg py-2 dark:bg-gray-900 dark:border-gray-700 z-50"
+                  >
+                    <div className="px-4 py-2 border-b dark:border-gray-700">
+                      <p className="text-sm font-medium truncate">{user.name || "User"}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                      <User className="h-4 w-4" />
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => { setProfileOpen(false); logout(); }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
 
           <button

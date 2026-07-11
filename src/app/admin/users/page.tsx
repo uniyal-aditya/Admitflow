@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import {
   Loader2, Mail, Smartphone, Bell, CalendarDays, Globe, Monitor, User,
   Search, Download, ChevronLeft, ChevronRight, Users, Eye, MessageSquare,
-  Heart, AlertCircle
+  Heart, AlertCircle, Ban, Shield, ExternalLink
 } from "lucide-react";
 
 interface AppUser {
   id: string;
   email: string;
   name: string | null;
+  role: string;
+  isBanned: boolean;
   createdAt: string;
   _count: { pushSubscriptions: number; notifications: number; downloads: number; favorites: number };
   settings: { emailNotifications: boolean; deviceNotifications: boolean } | null;
@@ -214,8 +216,8 @@ export default function UsersPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-gray-500">
-                      <th className="px-4 py-3 font-medium">Email</th>
-                      <th className="px-4 py-3 font-medium">Name</th>
+                      <th className="px-4 py-3 font-medium">User</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
                       <th className="px-4 py-3 font-medium text-center">Push</th>
                       <th className="px-4 py-3 font-medium text-center">Email</th>
                       <th className="px-4 py-3 font-medium text-center">Device</th>
@@ -223,13 +225,30 @@ export default function UsersPage() {
                       <th className="px-4 py-3 font-medium text-center"><Download className="h-3.5 w-3.5 inline" /></th>
                       <th className="px-4 py-3 font-medium text-center"><Heart className="h-3.5 w-3.5 inline" /></th>
                       <th className="px-4 py-3 font-medium"><CalendarDays className="h-3.5 w-3.5 inline" /></th>
+                      <th className="px-4 py-3 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((u) => (
-                      <tr key={u.id} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="px-4 py-3 font-medium">{u.email}</td>
-                        <td className="px-4 py-3 text-gray-500">{u.name || "\u2014"}</td>
+                      <tr key={u.id} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => router.push(`/admin/users/${u.id}`)}>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">{u.name || "\u2014"}</div>
+                          <div className="text-xs text-gray-500">{u.email}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            {u.isBanned && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full w-fit dark:bg-red-950/30 dark:text-red-400"><Ban className="h-3 w-3" />Banned</span>
+                            )}
+                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full w-fit ${
+                              u.role === "admin" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400" :
+                              u.role === "moderator" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400" :
+                              "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                            }`}>
+                              <User className="h-3 w-3" />{u.role}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-center">
                           {u._count.pushSubscriptions > 0 ? (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full dark:bg-green-950/30 dark:text-green-400">
@@ -257,6 +276,11 @@ export default function UsersPage() {
                         <td className="px-4 py-3 text-center text-xs text-gray-500">{u._count.favorites}</td>
                         <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                           {new Date(u.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/users/${u.id}`); }} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800" title="View details">
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}

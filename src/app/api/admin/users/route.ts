@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
           id: true,
           email: true,
           name: true,
+          role: true,
+          isBanned: true,
           createdAt: true,
           _count: { select: { pushSubscriptions: true, notifications: true, downloads: true, favorites: true } },
           settings: { select: { emailNotifications: true, deviceNotifications: true } },

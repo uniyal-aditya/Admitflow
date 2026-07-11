@@ -12,28 +12,33 @@ import {
   CalendarDays,
   Star,
   Settings,
-  Info,
   LayoutDashboard,
   Lightbulb,
   Shield,
+  User,
+  LogOut,
+  MessageCircle,
 } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/colleges", label: "College Profiles", icon: BookOpen },
   { href: "/notices", label: "Notice Center", icon: Bell },
+  { href: "/community", label: "Community", icon: MessageCircle },
   { href: "/search", label: "Search", icon: Search },
   { href: "/watchlist", label: "Watchlist", icon: Star },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/suggest", label: "Suggest College", icon: Lightbulb },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/about", label: "About", icon: Info },
+
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     fetch("/api/admin/check")
@@ -77,11 +82,31 @@ export function Sidebar() {
           </Link>
         )}
       </div>
-      <div className="mt-auto border-t p-4 dark:border-gray-800">
-        <div className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-4 text-white text-sm">
-          <p className="font-semibold">AdmitFlow v1.0</p>
-          <p className="mt-1 text-xs opacity-80">Uttarakhand College Admission Companion</p>
-        </div>
+      <div className="mt-auto border-t dark:border-gray-800">
+        {user && (
+          <div className="p-4">
+            <Link href="/profile" className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              {user.avatar ? (
+                <img src={user.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-bold shrink-0">
+                  {(user.name || user.email)[0].toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.name || "User"}</p>
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              </div>
+            </Link>
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-2 rounded-lg px-2 py-2 mt-1 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

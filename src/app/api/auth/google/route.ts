@@ -29,26 +29,30 @@ export async function POST(req: NextRequest) {
     const googleId = payload.sub;
     const email = payload.email;
     const name = payload.name || email.split("@")[0];
+    const avatar = payload.picture || null;
 
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (user) {
-      if (!user.googleId) {
+      const updates: Record<string, any> = {};
+      if (!user.googleId) updates.googleId = googleId;
+      if (avatar && user.avatar !== avatar) updates.avatar = avatar;
+      if (Object.keys(updates).length > 0) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { googleId },
+          data: updates,
         });
       }
     } else {
       user = await prisma.user.create({
-        data: { email, name, googleId },
+        data: { email, name, googleId, avatar },
       });
     }
 
     await setSessionCookie(user.id);
 
     return NextResponse.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar },
     });
   } catch (err) {
     console.error("Google auth error:", err);
