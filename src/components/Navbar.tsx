@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import {
   Bell,
   BookOpen,
+  GraduationCap,
   Menu,
   Search,
   Settings,

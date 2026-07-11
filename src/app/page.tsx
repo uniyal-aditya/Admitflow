@@ -144,7 +144,7 @@ export default function LandingPage() {
 
         <section className="mx-auto max-w-6xl px-4 pb-16">
           <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-8 md:p-12 text-white text-center">
-            <GraduationCap className="mx-auto h-10 w-10 mb-4 opacity-80" />
+            <Image src="/logo.png" alt="" width={40} height={40} className="mx-auto h-10 w-10 mb-4 opacity-80" />
             <h2 className="text-2xl md:text-3xl font-bold">Ready to Never Miss a Deadline?</h2>
             <p className="mt-3 max-w-xl mx-auto opacity-80">
               Join thousands of Uttarakhand students who use AdmitFlow to track college admissions.
