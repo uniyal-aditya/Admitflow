@@ -5,6 +5,10 @@ export async function middleware(req: NextRequest) {
 
   const isPublic =
     pathname === "/login" ||
+    pathname === "/" ||
+    pathname === "/about" ||
+    pathname === "/privacy" ||
+    pathname === "/tos" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
