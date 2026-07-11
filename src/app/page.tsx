@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowRight, Bell, BookOpen, BarChart3,
   CalendarDays, Sparkles, Shield, Lightbulb, ChevronRight,
@@ -53,7 +52,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="AdmitFlow" width={32} height={32} className="h-8 w-8" />
+            <img src="/logo.svg" alt="AdmitFlow" className="h-8 w-8" />
             <span className="font-bold text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">AdmitFlow</span>
           </Link>
           <div className="hidden md:flex items-center gap-3">
@@ -86,7 +85,7 @@ export default function LandingPage() {
       <main>
         <section className="mx-auto max-w-6xl px-4 pt-20 pb-16 md:pt-32 md:pb-24 text-center">
           <div className="flex justify-center mb-8">
-            <Image src="/logo.png" alt="AdmitFlow" width={96} height={96} className="h-24 w-24" priority />
+            <img src="/logo.svg" alt="AdmitFlow" className="h-24 w-24" />
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800 mb-6">
             Uttarakhand Government College Admissions
@@ -144,7 +143,7 @@ export default function LandingPage() {
 
         <section className="mx-auto max-w-6xl px-4 pb-16">
           <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-8 md:p-12 text-white text-center">
-            <Image src="/logo.png" alt="" width={40} height={40} className="mx-auto h-10 w-10 mb-4 opacity-80" />
+            <img src="/logo.svg" alt="" className="mx-auto h-10 w-10 mb-4 opacity-80" />
             <h2 className="text-2xl md:text-3xl font-bold">Ready to Never Miss a Deadline?</h2>
             <p className="mt-3 max-w-xl mx-auto opacity-80">
               Join thousands of Uttarakhand students who use AdmitFlow to track college admissions.

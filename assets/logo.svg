@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#4f46e5"/>
+  <path d="M256 96L96 200l160 96 160-96-160-96z" fill="none" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M96 200v88l160 96 160-96v-88" fill="none" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M176 256v64c0 17.6 35.8 32 80 32s80-14.4 80-32v-64" fill="none" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+  <text x="256" y="440" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="48" fill="white" opacity="0.8">AdmitFlow</text>
+</svg>
