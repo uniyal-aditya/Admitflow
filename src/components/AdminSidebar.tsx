@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   LayoutDashboard,
   Building2,
@@ -10,7 +10,6 @@ import {
   Lightbulb,
   Shield,
   Bell,
-  Menu,
   X,
   Users,
   ScrollText,
@@ -31,40 +30,35 @@ const navItems = [
   { label: "Admins", href: "/admin/admins", icon: Shield },
 ]
 
-export function AdminSidebar({ children }: { children: React.ReactNode }) {
+export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin"
     return pathname.startsWith(href)
   }
 
+  useEffect(() => {
+    onClose()
+  }, [pathname])
+
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <>
+      {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r flex flex-col transition-transform duration-200 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r flex flex-col transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:z-auto ${
+          open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b shrink-0">
-          <span className="text-lg font-bold text-blue-600">AdmitFlow Admin</span>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <X size={20} />
+        <div className="flex items-center justify-between h-14 px-4 border-b shrink-0 dark:border-gray-800">
+          <span className="text-sm font-bold text-blue-600">AdmitFlow Admin</span>
+          <button onClick={onClose} className="lg:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+            <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-3">
+        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
@@ -72,34 +66,20 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   active
                     ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                     : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={17} />
                 {item.label}
               </Link>
             )
           })}
         </nav>
       </aside>
-
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
-        <header className="h-16 flex items-center px-4 border-b bg-white dark:bg-gray-900 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <Menu size={20} />
-          </button>
-          <span className="ml-3 text-lg font-bold text-blue-600">AdmitFlow Admin</span>
-        </header>
-
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+    </>
   )
 }

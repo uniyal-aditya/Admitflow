@@ -116,6 +116,11 @@ body {
   to { transform: translateX(-50%); }
 }
 
+@keyframes marquee-fast {
+  from { transform: translateX(0); }
+  to { transform: translateX(-12.5%); }
+}
+
 .animate-marquee {
   display: inline-block;
   animation: marquee 30s linear infinite;

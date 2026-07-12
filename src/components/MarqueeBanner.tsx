@@ -40,20 +40,20 @@ export function MarqueeBanner() {
       .catch(() => {});
   }, []);
 
-  const count = banners.length;
-
   const renderText = () => (
     <>
       {banners.map((b, i) => (
         <span key={i}>
           <span>{b.message}</span>
           {i < banners.length - 1 && (
-            <span className="mx-2 md:mx-8 text-white/40">•</span>
+            <span className="mx-4 text-white/40">•</span>
           )}
         </span>
       ))}
     </>
   );
+
+  const textContent = renderText();
 
   return (
     <AnimatePresence>
@@ -73,18 +73,19 @@ export function MarqueeBanner() {
             </div>
             <div
               className="flex-1 overflow-hidden py-2 relative min-w-0"
-              style={{ maskImage: "linear-gradient(90deg,transparent 0,#000 32px,#000 98%,transparent 100%)" }}
+              style={{ maskImage: "linear-gradient(90deg,transparent 0,#000 16px,#000 98%,transparent 100%)" }}
             >
               <div
                 className="whitespace-nowrap"
                 style={{
                   display: "inline-block",
-                  animation: `marquee ${count <= 2 ? 5 : 10}s linear infinite`,
+                  animation: "marquee-fast 3s linear infinite",
                   willChange: "transform",
                 }}
               >
-                <span>{renderText()}</span>
-                <span className="ml-2 md:ml-4">{renderText()}</span>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <span key={i} className={i > 0 ? "ml-4" : ""}>{textContent}</span>
+                ))}
               </div>
             </div>
             <button

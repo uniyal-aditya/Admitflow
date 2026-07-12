@@ -24,6 +24,7 @@ interface PostData {
 
 interface CommentData {
   id: string; content: string; media: any | null; isEdited: boolean;
+  status: string; deleteReason: string | null;
   createdAt: string; updatedAt: string;
   user: PostUser;
 }
@@ -529,7 +530,9 @@ export default function CommunityPage() {
                           ) : (
                             postComments.map((c) => (
                               <div key={c.id} className="flex gap-3">
-                                {c.user.avatar ? (
+                                {c.status === "deleted" ? (
+                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs font-bold shrink-0 mt-0.5" />
+                                ) : c.user.avatar ? (
                                   <img src={c.user.avatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0 mt-0.5" />
                                 ) : (
                                   <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0 mt-0.5">
@@ -537,14 +540,24 @@ export default function CommunityPage() {
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">{c.user.name || "Anonymous"}</span>
-                                    {renderUserBadge(c.user)}
-                                    <span className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</span>
-                                    {c.isEdited && <span className="text-[10px] text-gray-400">(edited)</span>}
-                                  </div>
-                                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.content}</p>
-                                  {renderMedia(c.media as MediaItem[])}
+                                  {c.status === "deleted" ? (
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1.5 text-xs text-gray-400 italic">
+                                        <Ban className="h-3 w-3" />Deleted by admin{c.deleteReason ? `: ${c.deleteReason}` : ""}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">{c.user.name || "Anonymous"}</span>
+                                        {renderUserBadge(c.user)}
+                                        <span className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</span>
+                                        {c.isEdited && <span className="text-[10px] text-gray-400">(edited)</span>}
+                                      </div>
+                                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{c.content}</p>
+                                      {renderMedia(c.media as MediaItem[])}
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             ))

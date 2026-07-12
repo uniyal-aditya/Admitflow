@@ -147,16 +147,22 @@ export default function AdminPage() {
   const applyFix = async (issue: any) => {
     setFixingIssue(issue.id || issue.item);
     try {
-      const logRes = await fetch("/api/admin/logs", {
+      const res = await fetch("/api/data/fix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "apply_fix",
-          details: `Applied fix for ${issue.item}: ${issue.suggestedFix}`,
+          id: issue.id,
+          field: issue.field,
+          suggestedFix: issue.suggestedFix,
+          category: issue.category,
+          item: issue.item,
         }),
       });
-      if (!logRes.ok) throw new Error("Log failed");
-      await logRes.json();
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Fix failed:", err.error);
+        return;
+      }
 
       setVerifyResult((prev: any) => ({
         ...prev,
@@ -310,7 +316,7 @@ export default function AdminPage() {
                       disabled={fixingIssue === (issue.id || issue.item)}
                       className="shrink-0 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950/30 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
                     >
-                      {fixingIssue === (issue.id || issue.item) ? "Logging..." : "Log & Dismiss"}
+                      {fixingIssue === (issue.id || issue.item) ? "Fixing..." : "Apply Fix"}
                     </button>
                   </div>
                 ))}

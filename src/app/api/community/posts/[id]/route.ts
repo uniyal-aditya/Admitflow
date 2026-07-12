@@ -13,13 +13,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       select: {
         id: true, userId: true, title: true, content: true, media: true,
         tags: true, isPinned: true, isLocked: true, status: true,
-        moderatedById: true, moderatedAt: true, createdAt: true, updatedAt: true,
+        moderatedById: true, moderatedAt: true, deleteReason: true,
+        createdAt: true, updatedAt: true,
         user: { select: { id: true, name: true, avatar: true, role: true } },
         _count: { select: { comments: true } },
         comments: {
-          where: { status: "approved" },
+          where: { status: { in: ["approved", "deleted"] } },
           select: {
             id: true, content: true, media: true, isEdited: true,
+            status: true, deleteReason: true,
             createdAt: true, updatedAt: true,
             user: { select: { id: true, name: true, avatar: true, role: true } },
           },
@@ -83,6 +85,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       update.status = body.status;
       update.moderatedById = session.id;
       update.moderatedAt = new Date();
+      if (body.status === "deleted" && body.deleteReason) {
+        update.deleteReason = body.deleteReason;
+      }
     }
 
     const updated = await prisma.post.update({ where: { id }, data: update });
@@ -91,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await prisma.adminLog.create({
         data: {
           action: `post_${body.status}`,
-          details: JSON.stringify({ postId: id, postUserId: post.userId }),
+          details: JSON.stringify({ postId: id, postUserId: post.userId, reason: body.deleteReason || null }),
           adminEmail: session.email,
         },
       });
@@ -120,9 +125,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!isOwner && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     if (isAdmin) {
-      await prisma.post.update({ where: { id }, data: { status: "deleted", moderatedById: session.id, moderatedAt: new Date() } });
+      const body = await req.json().catch(() => ({}));
+      await prisma.post.update({
+        where: { id },
+        data: { status: "deleted", moderatedById: session.id, moderatedAt: new Date(), deleteReason: body.deleteReason || null },
+      });
       await prisma.adminLog.create({
-        data: { action: "post_deleted", details: JSON.stringify({ postId: id, postUserId: post.userId }), adminEmail: session.email },
+        data: { action: "post_deleted", details: JSON.stringify({ postId: id, postUserId: post.userId, reason: body.deleteReason || null }), adminEmail: session.email },
       });
     } else {
       await prisma.post.update({ where: { id }, data: { status: "deleted" } });

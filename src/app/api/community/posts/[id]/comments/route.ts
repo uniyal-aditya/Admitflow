@@ -47,15 +47,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Comment too long (max 10000 chars)" }, { status: 400 });
     }
 
-    const autoApprove = user?.role === "admin" || user?.role === "moderator";
-
     const comment = await prisma.comment.create({
       data: {
         postId: id,
         userId: session.id,
         content: body.content.trim(),
         media: body.media || undefined,
-        status: autoApprove ? "approved" : "pending",
+        status: "approved",
       },
       select: {
         id: true, content: true, media: true, isEdited: true,

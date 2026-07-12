@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  Loader2, Search, ChevronLeft, ChevronRight, MessageCircle, Pin, Lock,
+  Loader2, Search, ChevronLeft, ChevronRight, MessageCircle,   Pin, Lock,
   Unlock, CheckCircle, XCircle, Trash2, AlertTriangle, Clock, ExternalLink,
-  Filter, MessageSquareWarning, ShieldCheck, RefreshCw, Ban
+  Filter, MessageSquareWarning, ShieldCheck, RefreshCw, Ban, X
 } from "lucide-react";
 
 interface AdminPost {
@@ -29,6 +29,8 @@ export default function AdminCommunityPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
 
   const fetchPosts = useCallback(async (p: number) => {
     setLoading(true);
@@ -61,8 +63,15 @@ export default function AdminCommunityPage() {
       const body: any = {};
       if (action === "approve") body.status = "approved";
       else if (action === "reject") body.status = "rejected";
-      else if (action === "delete") body.status = "deleted";
-      else if (action === "pin") body.isPinned = true;
+      else if (action === "delete") {
+        if (!deleteReason.trim()) {
+          setError("Please provide a reason for deletion");
+          setActionLoading(null);
+          return;
+        }
+        body.status = "deleted";
+        body.deleteReason = deleteReason.trim();
+      } else if (action === "pin") body.isPinned = true;
       else if (action === "unpin") body.isPinned = false;
       else if (action === "lock") body.isLocked = true;
       else if (action === "unlock") body.isLocked = false;
@@ -73,6 +82,8 @@ export default function AdminCommunityPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Action failed");
+      setDeleteTarget(null);
+      setDeleteReason("");
       await fetchPosts(page);
     } catch (e: any) {
       setError(e.message);
@@ -80,6 +91,11 @@ export default function AdminCommunityPage() {
       setActionLoading(null);
     }
   };
+
+  function confirmDelete(postId: string) {
+    setDeleteTarget(postId);
+    setDeleteReason("");
+  }
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -187,7 +203,7 @@ export default function AdminCommunityPage() {
                         {post.isLocked ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
                         {post.isLocked ? "Unlock" : "Lock"}
                       </button>
-                      <button onClick={() => handleAction(post.id, "delete")} disabled={actionLoading === post.id} className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30">
+                      <button onClick={() => confirmDelete(post.id)} disabled={actionLoading === post.id} className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30">
                         <Trash2 className="h-3.5 w-3.5" />Delete
                       </button>
                     </>
@@ -214,6 +230,31 @@ export default function AdminCommunityPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={() => { setDeleteTarget(null); setDeleteReason(""); }}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Delete Post</h3>
+              <button onClick={() => { setDeleteTarget(null); setDeleteReason(""); }} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+            </div>
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">Provide a reason for deletion. This will be shown to users on the deleted post.</p>
+            <textarea
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="Enter reason for deletion..."
+              rows={3}
+              className="w-full resize-none rounded-lg border p-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-gray-600 dark:bg-gray-700"
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => { setDeleteTarget(null); setDeleteReason(""); }} className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+              <button onClick={() => handleAction(deleteTarget, "delete")} disabled={!deleteReason.trim() || actionLoading === deleteTarget} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                {actionLoading === deleteTarget ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

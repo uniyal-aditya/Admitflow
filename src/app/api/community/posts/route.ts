@@ -55,8 +55,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Content too long (max 50000 chars)" }, { status: 400 });
     }
 
-    const autoApprove = user?.role === "admin" || user?.role === "moderator";
-
     const post = await prisma.post.create({
       data: {
         userId: session.id,
@@ -64,7 +62,7 @@ export async function POST(req: NextRequest) {
         content: body.content.trim(),
         media: body.media || undefined,
         tags: body.tags || [],
-        status: autoApprove ? "approved" : "pending",
+        status: "approved",
       },
       select: {
         id: true, title: true, content: true, media: true, tags: true,
