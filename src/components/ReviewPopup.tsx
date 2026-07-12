@@ -82,7 +82,7 @@ export function ReviewPopup() {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border dark:border-gray-800 p-6 w-80"
+            className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border dark:border-gray-800 p-6 w-80"
           >
             <button onClick={handleClose} className="absolute top-3 right-3 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
               <X className="h-4 w-4" />

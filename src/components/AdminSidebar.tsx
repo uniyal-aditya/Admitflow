@@ -15,6 +15,7 @@ import {
   ScrollText,
   MessageCircle,
   Globe,
+  Star,
 } from "lucide-react"
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Notifications", href: "/admin/notifications", icon: Bell },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Community", href: "/admin/community", icon: MessageCircle },
+  { label: "Reviews", href: "/admin/reviews", icon: Star },
   { label: "Suggestions", href: "/admin/suggestions", icon: Lightbulb },
   { label: "Logs", href: "/admin/logs", icon: ScrollText },
   { label: "Admins", href: "/admin/admins", icon: Shield },
