@@ -100,11 +100,12 @@ model PushSubscription {
 }
 
 model Admin {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  role      String   @default("admin") // "superadmin" | "admin"
-  addedBy   String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  email      String   @unique
+  role       String   @default("admin") // "superadmin" | "admin"
+  addedBy    String?
+  totpSecret String?  // TOTP secret for two-factor authentication
+  createdAt  DateTime @default(now())
 }
 
 model College {

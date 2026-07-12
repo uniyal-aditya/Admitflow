@@ -29,7 +29,8 @@ const navItems = [
   { label: "Reviews", href: "/admin/reviews", icon: Star },
   { label: "Suggestions", href: "/admin/suggestions", icon: Lightbulb },
   { label: "Logs", href: "/admin/logs", icon: ScrollText },
-  { label: "Admins", href: "/admin/admins", icon: Shield },
+  { label: "Security", href: "/admin/security", icon: Shield },
+  { label: "Admins", href: "/admin/admins", icon: Users },
 ]
 
 export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

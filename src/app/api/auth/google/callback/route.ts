@@ -24,22 +24,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/login?error=config", req.url));
     }
 
-    // Must match the redirect_uri sent to Google's auth endpoint
     const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "admitflowin.vercel.app";
     const protocol = req.headers.get("x-forwarded-proto") || (host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https");
     const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
 
-    // Exchange authorization code for tokens
+    const codeVerifier = req.cookies.get("code_verifier")?.value;
+
+    const bodyParams: Record<string, string> = {
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    };
+    if (codeVerifier) {
+      bodyParams.code_verifier = codeVerifier;
+    }
+
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }),
+      body: new URLSearchParams(bodyParams),
     });
 
     if (!tokenRes.ok) {
@@ -55,7 +60,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/login?error=auth_failed", req.url));
     }
 
-    // Get user info from Google
     const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -74,7 +78,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/login?error=auth_failed", req.url));
     }
 
-    // Create or update user
     const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true, avatar: true, googleId: true, onboardingCompleted: true } });
 
     let userId: string;
@@ -98,8 +101,9 @@ export async function GET(req: NextRequest) {
 
     await logAdminAction(isNewUser ? "user_registered" : "user_login", `${name || email} signed in`, email);
 
-    const redirectUrl = isNewUser ? "/onboarding" : safeRedirect;
-    return NextResponse.redirect(new URL(redirectUrl, req.url));
+    const res = NextResponse.redirect(new URL(isNewUser ? "/onboarding" : safeRedirect, req.url));
+    res.cookies.delete("code_verifier");
+    return res;
   } catch (err) {
     console.error("Google callback error:", err);
     return NextResponse.redirect(new URL("/login?error=server", req.url));

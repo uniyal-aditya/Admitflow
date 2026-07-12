@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -14,7 +15,20 @@ export async function middleware(req: NextRequest) {
     pathname === "/favicon.ico" ||
     /\.(png|jpg|jpeg|svg|ico|webp|css|js)$/.test(pathname);
 
-  if (isPublic) return NextResponse.next();
+  // Rate limit all API routes (except auth)
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth")) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    const result = rateLimit(ip, 60, 60000);
+    if (!result.allowed) {
+      return new NextResponse("Too Many Requests", { status: 429, headers: { "Retry-After": String(Math.ceil((result.reset - Date.now()) / 1000)) } });
+    }
+  }
+
+  if (isPublic) {
+    const res = NextResponse.next();
+    res.headers.set("x-pathname", pathname);
+    return res;
+  }
 
   const sessionCookie = req.cookies.get("session")?.value;
   if (!sessionCookie) {
@@ -24,7 +38,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("x-pathname", pathname);
+  return res;
 }
 
 export const config = {
