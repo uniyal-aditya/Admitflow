@@ -7,6 +7,8 @@ interface User {
   email: string;
   name: string | null;
   avatar: string | null;
+  createdAt?: string;
+  onboardingCompleted?: boolean;
 }
 
 interface AuthContextType {
@@ -62,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
+    window.location.href = "/";
   }, []);
 
   return (

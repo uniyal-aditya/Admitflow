@@ -25,7 +25,7 @@ export async function verifyToken(token: string): Promise<string | null> {
   }
 }
 
-export async function getSession(): Promise<{ id: string; email: string; name: string | null; avatar: string | null; role: string; isBanned: boolean } | null> {
+export async function getSession(): Promise<{ id: string; email: string; name: string | null; avatar: string | null; role: string; isBanned: boolean; createdAt: Date; onboardingCompleted: boolean } | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -35,7 +35,7 @@ export async function getSession(): Promise<{ id: string; email: string; name: s
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, avatar: true, role: true, isBanned: true },
+    select: { id: true, email: true, name: true, avatar: true, role: true, isBanned: true, createdAt: true, onboardingCompleted: true },
   });
 
   return user;

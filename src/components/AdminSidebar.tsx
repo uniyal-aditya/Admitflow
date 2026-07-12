@@ -50,11 +50,11 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r flex flex-col transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b">
+        <div className="flex items-center justify-between h-16 px-6 border-b shrink-0">
           <span className="text-lg font-bold text-blue-600">AdmitFlow Admin</span>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -64,7 +64,7 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav className="flex-1 py-4 space-y-1 px-3">
+        <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-3">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
@@ -87,7 +87,7 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <header className="h-16 flex items-center px-4 border-b bg-white dark:bg-gray-900 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}

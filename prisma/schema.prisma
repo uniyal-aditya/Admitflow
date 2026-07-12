@@ -20,6 +20,8 @@ model User {
   bannedAt  DateTime?
   banReason String?
   lastLoginAt DateTime?
+  referralSource String?
+  onboardingCompleted Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -29,6 +31,7 @@ model User {
   notifications    Notification[]
   pushSubscriptions PushSubscription[]
   settings         UserSettings?
+  reviews      Review[]
   posts        Post[]
   comments     Comment[]
 }
@@ -229,6 +232,18 @@ model AdminLog {
 
   @@index([createdAt])
   @@index([action])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Suggestion {

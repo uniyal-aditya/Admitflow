@@ -63,16 +63,16 @@ export function MarqueeBanner() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm overflow-hidden"
+          className="relative w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm overflow-hidden"
           aria-live="polite"
         >
-          <div className="flex items-center">
+          <div className="mx-auto flex items-center max-w-7xl px-2 md:px-4">
             <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/10 font-medium text-xs">
               <Megaphone className="h-3.5 w-3.5" />
               Announcement
             </div>
             <div
-              className="flex-1 overflow-hidden py-2 relative"
+              className="flex-1 overflow-hidden py-2 relative min-w-0"
               style={{ maskImage: "linear-gradient(90deg,transparent 0,#000 32px,#000 98%,transparent 100%)" }}
             >
               <div

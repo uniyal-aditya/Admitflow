@@ -53,7 +53,7 @@ export default function SettingsPage() {
     const next = current.includes(type as any)
       ? current.filter((t) => t !== type)
       : [...current, type];
-    update("notificationTypes", next.join(","));
+    update("notificationTypes", next);
   }
 
   async function handlePushToggle(enable: boolean) {
