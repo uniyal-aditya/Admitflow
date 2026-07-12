@@ -3,6 +3,18 @@
   "buildCommand": "npx prisma generate && next build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
+  "redirects": [
+    {
+      "source": "/app",
+      "destination": "https://expo.dev/artifacts/eas/6JOFJZKqbCKSTvP68USHO9So-h_7X5txc8Ewosib3Uk.apk",
+      "permanent": false
+    },
+    {
+      "source": "/tryourapp",
+      "destination": "https://expo.dev/artifacts/eas/6JOFJZKqbCKSTvP68USHO9So-h_7X5txc8Ewosib3Uk.apk",
+      "permanent": false
+    }
+  ],
   "crons": [
     {
       "path": "/api/data/verify",
