@@ -50,7 +50,7 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r flex flex-col transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r flex flex-col transition-transform duration-200 lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -87,7 +87,7 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         <header className="h-16 flex items-center px-4 border-b bg-white dark:bg-gray-900 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
