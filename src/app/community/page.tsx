@@ -65,6 +65,11 @@ export default function CommunityPage() {
   const [commentText, setCommentText] = useState("");
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+  const [commentGifPicker, setCommentGifPicker] = useState<string | null>(null);
+  const [commentGifSearch, setCommentGifSearch] = useState("");
+  const [commentGifResults, setCommentGifResults] = useState<any[]>([]);
+  const [commentGifLoading, setCommentGifLoading] = useState(false);
+  const [commentGif, setCommentGif] = useState<Record<string, MediaItem | null>>({});
 
   const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
   const [modQueue, setModQueue] = useState<{ posts: number; comments: number }>({ posts: 0, comments: 0 });
@@ -197,20 +202,44 @@ export default function CommunityPage() {
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const searchCommentGifs = async (query: string) => {
+    setCommentGifLoading(true);
+    try {
+      const res = await fetch(`/api/community/gif?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error("Failed");
+      const d = await res.json();
+      setCommentGifResults(d.results || []);
+    } catch {
+      setCommentGifResults([]);
+    } finally {
+      setCommentGifLoading(false);
+    }
+  };
+
+  const selectCommentGif = (postId: string, gif: any) => {
+    setCommentGif(prev => ({ ...prev, [postId]: { type: "gif", url: gif.url, thumbnail: gif.preview } }));
+    setCommentGifPicker(null);
+    setCommentGifSearch("");
+  };
+
   const handleComment = async (postId: string) => {
     if (!commentText.trim()) return;
     setCommentLoading(prev => ({ ...prev, [postId]: true }));
     try {
+      const body: Record<string, any> = { content: commentText.trim() };
+      const selectedGif = commentGif[postId];
+      if (selectedGif) body.media = [selectedGif];
       const res = await fetch(`/api/community/posts/${postId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: commentText.trim() }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) return;
       const d = await res.json();
       setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), d.comment] }));
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p));
       setCommentText("");
+      setCommentGif(prev => ({ ...prev, [postId]: null }));
     } catch {} finally {
       setCommentLoading(prev => ({ ...prev, [postId]: false }));
     }
@@ -568,22 +597,63 @@ export default function CommunityPage() {
                       {post.isLocked ? (
                         <p className="text-sm text-gray-400 text-center"><Lock className="h-3.5 w-3.5 inline mr-1" />Comments are locked</p>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={expandedPost === post.id ? commentText : ""}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(post.id); } }}
-                            placeholder="Write a comment..."
-                            className="flex-1 rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
-                          />
-                          <button
-                            onClick={() => handleComment(post.id)}
-                            disabled={commentLoading[post.id] || !commentText.trim()}
-                            className="rounded-lg bg-indigo-600 p-2 text-white hover:bg-indigo-700 disabled:opacity-50"
-                          >
-                            {commentLoading[post.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                          </button>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={expandedPost === post.id ? commentText : ""}
+                              onChange={(e) => setCommentText(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(post.id); } }}
+                              placeholder="Write a comment..."
+                              className="flex-1 rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
+                            />
+                            <button
+                              onClick={() => handleComment(post.id)}
+                              disabled={commentLoading[post.id] || !commentText.trim()}
+                              className="rounded-lg bg-indigo-600 p-2 text-white hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                              {commentLoading[post.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {commentGif[post.id] && (
+                              <span className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2 py-1 text-xs dark:bg-gray-800">
+                                <span className="font-medium uppercase text-[10px] text-gray-500">GIF</span>
+                                <span className="truncate max-w-[100px]">{commentGif[post.id]?.url.replace(/^https?:\/\//, "").slice(0, 20)}</span>
+                                <button onClick={() => setCommentGif(prev => ({ ...prev, [post.id]: null }))} className="text-gray-400 hover:text-red-500"><X className="h-3 w-3" /></button>
+                              </span>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (commentGifPicker === post.id) { setCommentGifPicker(null); return; }
+                                setCommentGifPicker(post.id);
+                                searchCommentGifs("trending");
+                              }}
+                              className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors ${commentGif[post.id] ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}`}
+                            >
+                              <Smile className="h-3.5 w-3.5" />GIF
+                            </button>
+                          </div>
+                          {commentGifPicker === post.id && (
+                            <div className="border rounded-lg p-3 dark:border-gray-700">
+                              <div className="flex items-center gap-2 mb-2">
+                                <input type="text" value={commentGifSearch} onChange={(e) => setCommentGifSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && searchCommentGifs(commentGifSearch)} placeholder="Search GIFs..." className="flex-1 rounded-lg border px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-700" />
+                                <button onClick={() => searchCommentGifs(commentGifSearch)} className="rounded-lg bg-gray-100 px-2 py-1.5 text-xs font-medium hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Search</button>
+                                <button onClick={() => setCommentGifPicker(null)} className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-3.5 w-3.5" /></button>
+                              </div>
+                              {commentGifLoading ? (
+                                <div className="flex justify-center py-3"><Loader2 className="animate-spin" size={16} /></div>
+                              ) : (
+                                <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto">
+                                  {commentGifResults.map((gif: any) => (
+                                    <button key={gif.id} onClick={() => selectCommentGif(post.id, gif)} className="rounded overflow-hidden hover:ring-2 ring-indigo-500 transition-all">
+                                      <img src={gif.preview} alt={gif.title || "GIF"} className="w-full h-16 object-cover" />
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

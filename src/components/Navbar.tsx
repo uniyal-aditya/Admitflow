@@ -39,7 +39,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
-  const { canInstall, install } = useInstallApp();
+  const { install } = useInstallApp();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const { user, loading, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -121,24 +121,13 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">
-          <a
-            href="https://github.com/uniyal-aditya/AdmitFlowapp/releases/download/v1.0.0/AdmitFlow.apk"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={install}
             className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Download App
-          </a>
-          {canInstall && (
-            <button
-              onClick={install}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300 dark:hover:bg-indigo-900 transition-colors"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Install
-            </button>
-          )}
+          </button>
 
           {user && (
             <div className="relative profile-menu">
@@ -262,25 +251,13 @@ export function Navbar() {
                   Admin
                 </Link>
               )}
-              <a
-                href="https://github.com/uniyal-aditya/AdmitFlowapp/releases/download/v1.0.0/AdmitFlow.apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
-                onClick={() => setMobileOpen(false)}
+              <button
+                onClick={() => { install(); setMobileOpen(false); }}
+                className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
               >
                 <Download className="h-5 w-5" />
                 Download App
-              </a>
-              {canInstall && (
-                <button
-                  onClick={install}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                >
-                  <Download className="h-5 w-5" />
-                  Install App
-                </button>
-              )}
+              </button>
             </div>
           </motion.div>
         )}

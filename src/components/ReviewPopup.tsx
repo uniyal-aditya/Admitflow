@@ -25,6 +25,7 @@ export function ReviewPopup() {
       if (localStorage.getItem(LS_DISMISSED) === "true") return;
       const lastShown = localStorage.getItem(LS_LAST_SHOWN);
       if (lastShown && Date.now() - Number(lastShown) < ONE_WEEK) return;
+      if (user.createdAt && Date.now() - new Date(user.createdAt).getTime() < ONE_WEEK) return;
       setVisible(true);
     } catch {}
   }, [user, loading]);
