@@ -52,6 +52,8 @@ export default function AdminPage() {
   const [verifyResult, setVerifyResult] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
   const [fixingIssue, setFixingIssue] = useState<string | null>(null);
+  const [fixingAll, setFixingAll] = useState(false);
+  const [fixAllResult, setFixAllResult] = useState<{ applied: number; errors: number } | null>(null);
   const [autoVerify, setAutoVerify] = useState(true);
   const [nextVerifyIn, setNextVerifyIn] = useState(300);
   const [liveStatus, setLiveStatus] = useState<"connected" | "error">("connected");
@@ -175,6 +177,35 @@ export default function AdminPage() {
     setFixingIssue(null);
   };
 
+  const fixAll = async () => {
+    if (!verifyResult?.issues?.length || fixingAll) return;
+    setFixingAll(true);
+    setFixAllResult(null);
+    try {
+      const body = verifyResult.issues.map((i: any) => ({
+        id: i.id, field: i.field, suggestedFix: i.suggestedFix, category: i.category, item: i.item,
+      }));
+      const res = await fetch("/api/data/fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      setFixAllResult({ applied: json.applied || 0, errors: json.errors?.length || 0 });
+      if (json.applied > 0) {
+        const errorIssues = new Set((json.errors || []).map((e: any) => e.issue));
+        setVerifyResult((prev: any) => ({
+          ...prev,
+          issues: (prev.issues || []).filter((i: any) => errorIssues.has(i.item || i.id)),
+          verifiedOk: (prev.verifiedOk || 0) + (json.applied || 0),
+        }));
+      }
+    } catch (err) {
+      console.error("Fix all error:", err);
+    }
+    setFixingAll(false);
+  };
+
   const minutes = Math.floor(nextVerifyIn / 60);
   const seconds = nextVerifyIn % 60;
 
@@ -290,7 +321,17 @@ export default function AdminPage() {
             {/* Issues list with Apply Fix */}
             {verifyResult.issues?.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Issues Found:</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Issues Found:</p>
+                  <button
+                    onClick={fixAll}
+                    disabled={fixingAll}
+                    className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {fixingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                    {fixingAll ? "Fixing All..." : `Fix All (${verifyResult.issues.length})`}
+                  </button>
+                </div>
                 {verifyResult.issues.map((issue: any, i: number) => (
                   <div key={i} className="flex items-start gap-3 rounded-lg border p-3 text-sm dark:border-gray-700">
                     <div className="flex-1 min-w-0">

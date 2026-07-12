@@ -138,7 +138,7 @@ export default function UsersPage() {
           <p className="text-sm text-gray-500 mt-1">
             {tab === "users"
               ? `${pageInfo.total} registered users · ${pushSubscribed} push subscribed · ${emailEnabled} email enabled`
-              : `${visitorPageInfo.total} total visitors · ${pwaVisitors} PWA · ${visitorPageInfo.total - pwaVisitors} web`}
+              : `${visitorPageInfo.total} total App users · ${pwaVisitors} PWA · ${visitorPageInfo.total - pwaVisitors} web`}
           </p>
         </div>
         <button
@@ -160,7 +160,7 @@ export default function UsersPage() {
             }`}
           >
             <Users className="h-4 w-4" />
-            Account Users
+            Website Users
           </button>
           <button
             onClick={() => { setTab("visitors"); setVisitorPage(1); setSearch(""); }}
@@ -169,7 +169,7 @@ export default function UsersPage() {
             }`}
           >
             <Globe className="h-4 w-4" />
-            Visitors
+            App Users
           </button>
         </div>
         <div className="flex items-center gap-2 flex-1 max-w-md">
