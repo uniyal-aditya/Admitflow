@@ -121,6 +121,15 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">
+          <a
+            href="https://github.com/uniyal-aditya/AdmitFlowapp/releases/download/v1.0.0/AdmitFlow.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download App
+          </a>
           {canInstall && (
             <button
               onClick={install}
@@ -253,6 +262,16 @@ export function Navbar() {
                   Admin
                 </Link>
               )}
+              <a
+                href="https://github.com/uniyal-aditya/AdmitFlowapp/releases/download/v1.0.0/AdmitFlow.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
+                onClick={() => setMobileOpen(false)}
+              >
+                <Download className="h-5 w-5" />
+                Download App
+              </a>
               {canInstall && (
                 <button
                   onClick={install}

@@ -43,7 +43,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <ThemeProvider>
           <AuthProvider>
           <NotificationProvider>

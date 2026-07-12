@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Check, Pencil, Mail, CalendarDays, Shield, Camera, Image as ImageIcon, X } from "lucide-react";
+import { Loader2, Check, Pencil, Mail, CalendarDays, Shield, Camera, Image as ImageIcon, X, Download, Trash2, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
 function AvatarPopup({ onClose, onCamera, onUpload, uploading }: {
@@ -84,6 +84,9 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showAvatarPopup, setShowAvatarPopup] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -136,6 +139,33 @@ export default function ProfilePage() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/auth/export");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `admitflow-data-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+    setExporting(false);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/auth/account", { method: "DELETE" });
+      if (res.ok) {
+        window.location.href = "/";
+      }
+    } catch {}
+    setDeleting(false);
   }
 
   if (loading || !user) {
@@ -302,6 +332,25 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Data & Account Actions */}
+        <div className="space-y-3">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {exporting ? "Exporting..." : "Export My Data"}
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-200 px-6 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Account
+          </button>
+        </div>
+
         {/* Sign Out */}
         <div className="flex justify-center">
           <button
@@ -312,6 +361,51 @@ export default function ProfilePage() {
           </button>
         </div>
       </motion.div>
+
+      {/* Delete Account Confirmation */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border dark:border-gray-800 p-6 w-80"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-5">
+                <AlertTriangle className="h-10 w-10 mx-auto text-red-500 mb-3" />
+                <h3 className="font-semibold text-lg">Delete Account?</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  This permanently deletes your account, posts, comments, favorites, and all associated data. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Avatar popup */}
       {showAvatarPopup && (

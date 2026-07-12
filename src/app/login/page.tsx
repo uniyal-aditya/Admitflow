@@ -55,6 +55,7 @@ export default function LoginPage() {
 
   return (
     <>
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
       <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950">
         <div className="w-full max-w-md">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-8 transition-colors">

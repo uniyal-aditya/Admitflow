@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin";
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { colleges, collegeTimelines } from "@/data/colleges";
@@ -12,6 +13,9 @@ const PROVIDERS: Record<string, { baseUrl: string; defaultModel: string }> = {
 };
 
 export async function GET() {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const provider = (process.env.LLM_PROVIDER || "openrouter") as string;
   const modelName = process.env.LLM_MODEL || (PROVIDERS[provider]?.defaultModel || PROVIDERS.openrouter.defaultModel);
   const key = process.env.LLM_API_KEY || "";

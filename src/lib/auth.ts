@@ -2,9 +2,13 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db/prisma";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "admitflow-dev-secret-change-in-production"
-);
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required");
+  }
+  return new TextEncoder().encode(secret);
+}
 
 const COOKIE_NAME = "session";
 
@@ -13,12 +17,12 @@ export async function createToken(userId: string): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<string | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload.userId as string;
   } catch {
     return null;

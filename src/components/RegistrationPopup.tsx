@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader, CheckCircle } from "lucide-react";
+import { X, Loader, CheckCircle, Check } from "lucide-react";
+import Link from "next/link";
 
 const STORAGE_KEY = "af_reg_popup_done";
 
@@ -11,6 +12,7 @@ export function RegistrationPopup() {
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [consent, setConsent] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", referralSource: "", customSource: "" });
 
@@ -30,6 +32,7 @@ export function RegistrationPopup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!consent) { setError("You must agree to the privacy policy to continue."); return; }
     setSaving(true);
     try {
       const body: Record<string, string> = { name: form.name, email: form.email, phone: form.phone };
@@ -122,7 +125,22 @@ export function RegistrationPopup() {
                     <input id="popup-custom-source" type="text" placeholder="Please specify" value={form.customSource} onChange={(e) => setForm({ ...form, customSource: e.target.value })} aria-label="Please specify" className="w-full rounded-xl border bg-white/50 px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-800 dark:border-gray-700" />
                   </div>
                 )}
-                <button type="submit" disabled={saving} className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="peer sr-only" />
+                    <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${
+                      consent ? "bg-indigo-600 border-indigo-600" : "border-gray-300 dark:border-gray-600 group-hover:border-gray-400"
+                    }`}>
+                      {consent && <Check size={14} className="text-white" />}
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    I agree to the{" "}
+                    <Link href="/privacy" className="text-indigo-600 hover:underline">Privacy Policy</Link>{" "}
+                    and consent to the collection of my name, email, and phone for admission updates.
+                  </span>
+                </label>
+                <button type="submit" disabled={saving || !consent} className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-sm font-medium text-white hover:from-indigo-700 hover:to-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <Loader className="h-4 w-4 animate-spin" />}
                   {saving ? "Saving..." : "Notify Me"}
                 </button>
