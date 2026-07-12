@@ -24,7 +24,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  if (isPublic) {
+  if (isPublic || pathname.startsWith("/api/")) {
     const res = NextResponse.next();
     res.headers.set("x-pathname", pathname);
     return res;

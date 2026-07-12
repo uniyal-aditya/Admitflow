@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "@/lib/db/prisma";
-import { setSessionCookie } from "@/lib/auth";
+import { createToken, COOKIE_NAME } from "@/lib/auth";
 
 async function upsertUser(googleId: string, email: string, name: string, avatar: string | null) {
   let user = await prisma.user.findUnique({ where: { email } });
@@ -75,11 +75,19 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await upsertUser(googleId, email, name, avatar);
-    await setSessionCookie(user.id);
+    const token = await createToken(user.id);
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar },
     });
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+    return res;
   } catch (err) {
     console.error("Google auth error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

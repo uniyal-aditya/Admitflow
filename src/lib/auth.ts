@@ -10,7 +10,7 @@ function getJwtSecret() {
   return new TextEncoder().encode(secret);
 }
 
-const COOKIE_NAME = "session";
+export const COOKIE_NAME = "session";
 
 export async function createToken(userId: string): Promise<string> {
   return new SignJWT({ userId })

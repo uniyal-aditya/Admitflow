@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { setSessionCookie } from "@/lib/auth";
+import { createToken, COOKIE_NAME } from "@/lib/auth";
 import { logAdminAction } from "@/lib/admin-log";
 
 export async function GET(req: NextRequest) {
@@ -97,11 +97,18 @@ export async function GET(req: NextRequest) {
       userId = newUser.id;
     }
 
-    await setSessionCookie(userId);
+    const token = await createToken(userId);
 
     await logAdminAction(isNewUser ? "user_registered" : "user_login", `${name || email} signed in`, email);
 
     const res = NextResponse.redirect(new URL(isNewUser ? "/onboarding" : safeRedirect, req.url));
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
     res.cookies.delete("code_verifier");
     return res;
   } catch (err) {
