@@ -1,5 +1,6 @@
 import { colleges } from "@/data/colleges";
 import type { TimelineStage } from "@/types";
+import { deriveNoticeStatus, deriveTimelineStages } from "@/lib/services/deadline";
 
 export function getCollegeName(id: string): string {
   return colleges.find((c) => c.id === id)?.name ?? id;
@@ -126,31 +127,30 @@ export function ownershipLabel(ownership: string): string {
   return labels[ownership] ?? ownership;
 }
 
-export function getComputedStatus(notice: { publishedDate: string; lastDate?: string; status: string }): "active" | "upcoming" | "expired" {
-  const now = new Date();
-  if (notice.lastDate && new Date(notice.lastDate) < now) return "expired";
-  if (new Date(notice.publishedDate) > now) return "upcoming";
-  return "active";
+export type ComputedNoticeStatus = "active" | "upcoming" | "expired";
+
+/**
+ * Time-derived notice status — delegated to the Phase 4 deadline engine so
+ * client and server share one implementation (server-computed statuses from
+ * the service layer are authoritative; this is the client fallback).
+ */
+export function getComputedStatus(notice: { publishedDate: string; lastDate?: string; status: string }): ComputedNoticeStatus {
+  return deriveNoticeStatus(notice.publishedDate, notice.lastDate);
 }
 
+/**
+ * Timeline state re-derivation — delegated to the Phase 4 deadline engine.
+ * Server components receive already-derived stages from the service layer;
+ * this remains for client-side re-derivation parity.
+ */
 export function computeTimeline(timeline: {
   currentStage?: string;
   stages: { stage: string; label: string; date?: string; status: string; description?: string }[];
 }) {
-  const now = new Date();
-
-  const stages = timeline.stages.map((s) => {
-    let status = s.status as "completed" | "current" | "upcoming";
-
-    if (s.date && s.status !== "current") {
-      const stageDate = new Date(s.date);
-      if (stageDate < now && status !== "completed") {
-        status = "completed";
-      }
-    }
-
-    return { ...s, status, stage: s.stage as TimelineStage };
-  });
+  const stages = deriveTimelineStages(timeline.stages).map((s) => ({
+    ...s,
+    stage: s.stage as TimelineStage,
+  }));
 
   const currentStage = (timeline.currentStage || stages.find((s) => s.status === "current")?.stage || stages[stages.length - 1]?.stage || "closed") as TimelineStage;
 

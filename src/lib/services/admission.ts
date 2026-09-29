@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { prisma } from "@/lib/db/prisma";
+import { deriveNoticeStatus, deriveTimelineStages, deriveCurrentStage } from "@/lib/services/deadline";
 import type {
   College,
   Course,
@@ -140,8 +141,8 @@ function isoDate(d: Date | null): string {
  * Canonical AdmissionNotice → legacy Notice view model.
  * - `lastDate` is derived as the latest deadline date on the notice (the
  *   normalized model stores structured dates instead of a scalar lastDate).
- * - `status` is left empty: it is time-derived in the UI (getComputedStatus)
- *   and Phase 4 replaces it with the deadline engine.
+ * - `status` is time-derived by the Phase 4 deadline engine at request time;
+ *   it is authoritative (the UI no longer re-derives it).
  */
 export function noticeRowToViewModel(row: {
   id: string;
@@ -171,8 +172,7 @@ export function noticeRowToViewModel(row: {
     type: row.type as Notice["type"],
     publishedDate: isoDate(row.publishedAt),
     lastDate,
-    // Unused by UI (derived at render time); kept for view-model parity.
-    status: "active",
+    status: deriveNoticeStatus(row.publishedAt, lastDate),
     summary: row.summary ?? "",
     highlights: [],
     pdfUrl: row.pdfUrl ?? "",
@@ -220,8 +220,9 @@ export async function getNoticeById(id: string): Promise<Notice | null> {
 
 /**
  * LegacyTimelineStage rows → TimelineData view model. Raw stage keys and
- * statuses are preserved losslessly by the seeder; time re-derivation still
- * happens in the UI via computeTimeline (Phase 4 replaces it).
+ * statuses are preserved losslessly by the seeder; stage statuses are
+ * re-derived from dates at request time by the Phase 4 deadline engine
+ * (a dataset "current" marker still wins as an override).
  */
 export async function getTimeline(collegeId: string): Promise<TimelineData | undefined> {
   const rows = await prisma.legacyTimelineStage.findMany({
@@ -229,14 +230,15 @@ export async function getTimeline(collegeId: string): Promise<TimelineData | und
     orderBy: { sortOrder: "asc" },
   });
   if (rows.length === 0) return undefined;
-  const stages = rows.map((s) => ({
+  const raw = rows.map((s) => ({
     stage: s.rawStageKey as TimelineStage,
     label: s.label,
     date: s.date ? isoDate(s.date) : undefined,
-    status: (s.rawStatus ?? "upcoming") as "completed" | "current" | "upcoming",
+    status: s.rawStatus ?? "upcoming",
     description: s.description ?? undefined,
   }));
-  const currentStage = stages.find((s) => s.status === "current")?.stage ?? stages.at(-1)!.stage;
+  const stages = deriveTimelineStages(raw);
+  const currentStage = deriveCurrentStage(stages, stages.at(-1)!.stage) as TimelineStage;
   return { currentStage, stages };
 }
 
