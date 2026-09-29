@@ -13,7 +13,10 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "data:seed:dry-run": "tsx scripts/migrate-seed.ts --dry-run",
+    "data:seed": "tsx scripts/migrate-seed.ts",
+    "data:verify": "tsx scripts/migrate-seed.ts --verify"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.9",
@@ -48,6 +51,7 @@
     "@types/web-push": "^3.6.4",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.1.4",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }

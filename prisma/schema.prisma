@@ -112,12 +112,12 @@ model College {
   id              String   @id
   name            String
   shortName       String
-  type            String   // "university" | "engineering" | "medical" | etc
-  ownership       String   // "government" | "private" | "deemed" | etc
+  type            String   // "university" | "engineering" | "medical" | etc (legacy free text; enum world lives in the normalized tables below)
+  ownership       String   // "government" | "private" | "deemed" | etc (legacy free text)
   location        String
   district        String
   website         String?
-  admissionPortal String?
+  admissionPortal String?  // legacy pattern-generated field; deprecated — will be removed in Phase 5 (admin rebuild)
   contactPhone    String?
   contactEmail    String?
   description     String?
@@ -126,21 +126,31 @@ model College {
   affiliation     String?
   principal       String?
   imageUrl        String?
-  courses         Json     @default("[]")
+  courses         Json     @default("[]") // legacy JSON blob; superseded by CourseOffering — removed in Phase 5
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  notices Notice[]
+  notices        Notice[]
+  offerings      CourseOffering[]
+  sessions       CollegeSession[]
+  deadlines      Deadline[]
+  facilities     CampusFacility[]
+  timelineStages LegacyTimelineStage[]
+  admissionNotices AdmissionNotice[]
+
+  @@index([district])
+  @@index([type])
+  @@index([ownership])
 }
 
 model Notice {
   id               String   @id
   collegeId        String
   title            String
-  type             String   // "admission" | "registration" | etc
+  type             String   // "admission" | "registration" | etc (legacy)
   publishedDate    String
   lastDate         String?
-  status           String   // "active" | "upcoming" | "expired"
+  status           String   // "active" | "upcoming" | "expired" (legacy hardcoded status; derived status lives in Deadline/computeAdmissionStatus from Phase 4)
   summary          String?
   highlights       Json     @default("[]")
   pdfUrl           String?
@@ -238,7 +248,7 @@ model AdminLog {
 }
 
 model Review {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
   rating    Int
   comment   String?
@@ -261,4 +271,347 @@ model Suggestion {
   suggestedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Normalized admission domain (Phase 1 — ADDITIVE).
+// Legacy College/Notice models above are untouched so existing admin CRUD
+// keeps working. Every fact below points to a Source via Attribution.
+// Nothing is invented; unknown provenance = unverified.
+// Naming note: `AdmissionNotice` is the canonical notice table; the legacy
+// `Notice` table above is removed and this is renamed in Phase 5.
+// ═══════════════════════════════════════════════════════════════════════
+
+enum CollegeTypeEnum {
+  university
+  engineering
+  polytechnic
+  degree
+  diploma
+  medical
+  management
+  pharmacy
+  law
+  other
+}
+
+enum OwnershipEnum {
+  government
+  private
+  aided
+  deemed
+  autonomous
+}
+
+enum NoticeTypeEnum {
+  admission
+  registration
+  counselling
+  spot_round
+  vacant_seat
+  merit_list
+  waiting_list
+  fee_payment
+  reporting
+  extension
+  general
+}
+
+enum EditorialStatus {
+  draft
+  published
+  archived
+}
+
+enum SourceKind {
+  official
+  news
+  user_report
+  internal
+}
+
+enum VerificationState {
+  unverified
+  verified
+  deprecated
+}
+
+enum DeadlineEvent {
+  registration_open
+  registration_close
+  merit_list
+  choice_filling
+  seat_allotment
+  fee_payment
+  reporting
+  counselling_round
+  spot_round
+  result
+  classes_begin
+  other
+  waiting_list
+}
+
+enum ScopeType {
+  college
+  offering
+  authority
+}
+
+enum FeeComponent {
+  tuition
+  hostel
+  exam
+  one_time
+  other
+}
+
+enum FeeFrequency {
+  per_year
+  per_semester
+  total
+}
+
+enum ProgramLevel {
+  diploma
+  undergraduate
+  postgraduate
+  doctoral
+}
+
+model Source {
+  id            String            @id @default(cuid())
+  name          String
+  url           String?
+  kind          SourceKind        @default(official)
+  verification  VerificationState @default(unverified)
+  lastCheckedAt DateTime?
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  attributions Attribution[]
+
+  @@unique([name, url])
+}
+
+model Attribution {
+  id              String  @id @default(cuid())
+  sourceId        String
+  source          Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  entityType      String
+  entityId        String
+  fieldPath       String?
+  verifiedByAdmin String?
+  verifiedAt      DateTime?
+
+  @@index([entityType, entityId])
+  @@index([sourceId])
+}
+
+model AcademicSession {
+  id    Int    @id @default(autoincrement())
+  year  Int    @unique
+  label String
+
+  offerings CourseOffering[]
+  fees      FeeStructure[]
+  routes    AdmissionRoute[]
+  admissionNotices AdmissionNotice[]
+  deadlines Deadline[]
+}
+
+model Program {
+  id       String       @id
+  name     String       @unique
+  level    ProgramLevel @default(undergraduate)
+  keywords String[]     @default([])
+
+  offerings CourseOffering[]
+}
+
+model Branch {
+  id      String   @id
+  name    String   @unique
+  aliases String[] @default([])
+
+  offerings CourseOffering[]
+}
+
+model CollegeSession {
+  id        String  @id @default(cuid())
+  collegeId String
+  year      Int
+  notes     String?
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, year])
+}
+
+model CampusFacility {
+  id        String   @id @default(cuid())
+  collegeId String   @unique
+  hostel    Boolean?
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+}
+
+model CourseOffering {
+  id            String   @id @default(cuid())
+  collegeId     String
+  programId     String
+  branchId      String?
+  sessionYear   Int
+  durationYears Float?
+  durationLabel String?
+  totalSeats    Int?
+  eligibility   String?
+
+  college   College         @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  program   Program         @relation(fields: [programId], references: [id], onDelete: Restrict)
+  branch    Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  session   AcademicSession @relation(fields: [sessionYear], references: [year])
+  fees      FeeStructure[]
+  routes    AdmissionRoute[]
+  deadlines Deadline[]
+
+  @@unique([collegeId, programId, branchId, sessionYear])
+  @@index([programId])
+  @@index([branchId])
+  @@index([sessionYear])
+  @@index([collegeId])
+}
+
+model FeeStructure {
+  id          String       @id @default(cuid())
+  offeringId  String
+  component   FeeComponent @default(tuition)
+  amountPaise Int
+  frequency   FeeFrequency @default(per_year)
+  sessionYear Int
+
+  offering CourseOffering  @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  session  AcademicSession @relation(fields: [sessionYear], references: [year])
+
+  @@unique([offeringId, component, sessionYear])
+  @@index([sessionYear])
+}
+
+model EntranceExam {
+  id             String   @id
+  name           String   @unique
+  aliases        String[] @default([])
+  conductingBody String?
+
+  routes AdmissionRoute[]
+}
+
+model CounsellingAuthority {
+  id      String  @id
+  name    String  @unique
+  website String?
+  state   String?
+
+  routes           AdmissionRoute[]
+  deadlines        Deadline[]
+  admissionNotices AdmissionNotice[]
+}
+
+model AdmissionRoute {
+  id                    String  @id @default(cuid())
+  offeringId            String
+  sessionId             Int
+  examId                String?
+  authorityId           String?
+  eligibilityText       String?
+  eligibilityStructured Json?
+
+  offering  CourseOffering        @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  session   AcademicSession       @relation(fields: [sessionId], references: [year])
+  exam      EntranceExam?         @relation(fields: [examId], references: [id])
+  authority CounsellingAuthority? @relation(fields: [authorityId], references: [id])
+
+  @@unique([offeringId, examId, authorityId])
+  @@index([examId])
+  @@index([authorityId])
+}
+
+model Deadline {
+  id             String        @id @default(cuid())
+  scopeType      ScopeType
+  collegeId      String?
+  offeringId     String?
+  authorityId    String?
+  eventId        DeadlineEvent
+  label          String
+  startsAt       DateTime?
+  endsAt         DateTime?
+  sessionId      Int
+  statusOverride String?
+
+  college   College?              @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  offering  CourseOffering?       @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  authority CounsellingAuthority? @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+  session   AcademicSession       @relation(fields: [sessionId], references: [year])
+
+  @@index([scopeType, endsAt])
+  @@index([collegeId])
+  @@index([offeringId])
+  @@index([authorityId])
+}
+
+model AdmissionNotice {
+  id                String          @id
+  collegeId         String?
+  authorityId       String?
+  sessionId         Int
+  title             String
+  summary           String?
+  type              NoticeTypeEnum
+  publishedAt       DateTime?
+  officialUrl       String?
+  pdfUrl            String?
+  status            EditorialStatus @default(published)
+  documentsRequired String[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  college   College?              @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  authority CounsellingAuthority? @relation(fields: [authorityId], references: [id])
+  session   AcademicSession       @relation(fields: [sessionId], references: [year])
+  dates     AdmissionNoticeDate[]
+
+  @@index([publishedAt])
+  @@index([type])
+  @@index([collegeId])
+}
+
+model AdmissionNoticeDate {
+  id       String   @id @default(cuid())
+  noticeId String
+  kind     String
+  label    String
+  date     DateTime
+
+  notice AdmissionNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  @@index([noticeId])
+  @@index([date])
+}
+
+model LegacyTimelineStage {
+  id          String        @id @default(cuid())
+  collegeId   String
+  eventId     DeadlineEvent
+  label       String
+  date        DateTime?
+  rawStageKey String
+  rawStatus   String?
+  description String?
+  sortOrder   Int
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, sortOrder])
 }
