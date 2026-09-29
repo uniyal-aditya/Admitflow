@@ -1,27 +1,27 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, ExternalLink, Globe, Mail, Phone, MapPin,
-  Calendar, Star, BookOpen, FileText, GraduationCap, DollarSign,
+  Calendar, BookOpen, GraduationCap, DollarSign,
   Users, Award, Building2, ChevronRight, Clock, Bell,
 } from "lucide-react";
-import { colleges, collegeTimelines } from "@/data/colleges";
+import { getCollegeDetail } from "@/lib/services/admission";
 import { CollegeLogo } from "@/components/CollegeLogo";
-import { getNoticesByCollege } from "@/data/notices";
+import { FavoriteStar } from "@/components/FavoriteStar";
 import { NoticeCard } from "@/components/NoticeCard";
 import { Timeline } from "@/components/Timeline";
-import { useSyncFavorite } from "@/hooks/useSyncFavorite";
-import { noticeTypeColor, noticeTypeLabel, formatDate, collegeTypeLabel, ownershipColor, getComputedStatus, computeTimeline } from "@/lib/utils";
+import { noticeTypeColor, collegeTypeLabel, ownershipColor, computeTimeline } from "@/lib/utils";
 
-export default function CollegeDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
-  const college = colleges.find((c) => c.id === id);
-  const [isFav, toggleFav] = useSyncFavorite(id);
+export const dynamic = "force-dynamic";
 
-  if (!college) {
+export default async function CollegeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const detail = await getCollegeDetail(id);
+
+  if (!detail) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-400">
         <Building2 className="h-16 w-16 mb-4" />
@@ -31,10 +31,9 @@ export default function CollegeDetailPage() {
     );
   }
 
-  const collegeNotices = getNoticesByCollege(id);
-  const rawTimeline = collegeTimelines[id];
+  const { college, notices: collegeNotices, timeline: rawTimeline } = detail;
   const timeline = rawTimeline ? computeTimeline(rawTimeline) : undefined;
-  const activeNotices = collegeNotices.filter((n) => getComputedStatus(n) === "active");
+  const activeNotices = collegeNotices.filter((n) => n.lastDate ? new Date(n.lastDate) >= new Date() : true);
 
   return (
     <div className="space-y-8">
@@ -67,16 +66,7 @@ export default function CollegeDetailPage() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={toggleFav}
-              className={`rounded-xl p-2.5 transition-colors ${
-                isFav
-                  ? "text-yellow-500 hover:text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30"
-                  : "text-gray-300 hover:text-gray-400 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              <Star className={`h-6 w-6 ${isFav ? "fill-current" : ""}`} />
-            </button>
+            <FavoriteStar id={college.id} />
           </div>
 
           <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
@@ -87,12 +77,12 @@ export default function CollegeDetailPage() {
             <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
               <Calendar className="h-4 w-4 text-gray-400 mb-1" />
               <p className="text-xs text-gray-400">Established</p>
-              <p className="font-semibold text-sm">{college.established}</p>
+              <p className="font-semibold text-sm">{college.established || "—"}</p>
             </div>
             <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
               <Award className="h-4 w-4 text-gray-400 mb-1" />
               <p className="text-xs text-gray-400">Accreditation</p>
-              <p className="font-semibold text-sm">{college.accreditation}</p>
+              <p className="font-semibold text-sm">{college.accreditation ?? "—"}</p>
             </div>
             <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
               <BookOpen className="h-4 w-4 text-gray-400 mb-1" />
@@ -102,44 +92,52 @@ export default function CollegeDetailPage() {
             <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
               <Users className="h-4 w-4 text-gray-400 mb-1" />
               <p className="text-xs text-gray-400">Affiliation</p>
-              <p className="font-semibold text-sm truncate">{college.affiliation}</p>
+              <p className="font-semibold text-sm truncate">{college.affiliation ?? "—"}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <a
-              href={college.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-            >
-              <Globe className="h-4 w-4" />
-              Official Website
-              <ExternalLink className="h-3 w-3" />
-            </a>
-            <a
-              href={college.admissionPortal}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-            >
-              <FileText className="h-4 w-4" />
-              Admission Portal
-            </a>
+            {college.website && (
+              <a
+                href={college.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+              >
+                <Globe className="h-4 w-4" />
+                Official Website
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {college.admissionPortal && (
+              <a
+                href={college.admissionPortal}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
+              >
+                <BookOpen className="h-4 w-4" />
+                Admission Portal
+              </a>
+            )}
           </div>
 
           {college.contact && (
             <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
               <h2 className="font-semibold mb-4">Contact Information</h2>
               <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span>{college.contact.phone}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span>{college.contact.email}</span>
-                </div>
+                {college.contact.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span>{college.contact.phone}</span>
+                  </div>
+                )}
+                {college.contact.email && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span>{college.contact.email}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -158,23 +156,20 @@ export default function CollegeDetailPage() {
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">{course.name}</p>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{course.duration}</span>
-                      <span className="flex items-center gap-1"><Users className="h-3 w-3" />{course.seats} seats</span>
+                      {course.duration && (
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{course.duration}</span>
+                      )}
+                      {course.seats > 0 && (
+                        <span className="flex items-center gap-1"><Users className="h-3 w-3" />{course.seats} seats</span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />₹{course.fees.toLocaleString()}/yr</span>
-                    <span>{course.eligibility}</span>
+                    {course.fees > 0 && (
+                      <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />₹{course.fees.toLocaleString("en-IN")}/yr</span>
+                    )}
+                    {course.eligibility && <span>{course.eligibility}</span>}
                   </div>
-                  {course.branches && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {course.branches.map((b) => (
-                        <span key={b} className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
-                          {b}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
