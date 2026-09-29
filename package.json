@@ -9,6 +9,8 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "tsx --env-file=.env --test tests/*.test.ts",
+    "test:unit": "tsx --test tests/deadline.test.ts",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:deploy:retry": "tsx scripts/deploy-migration.ts",
