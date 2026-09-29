@@ -1,22 +1,18 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Bell, BookOpen, CalendarDays, Clock, Download,
-  GraduationCap, Megaphone, Star, TrendingUp, AlertTriangle,
+  CalendarDays, Clock,
+  Megaphone, TrendingUp, AlertTriangle,
   ArrowRight, Sparkles,
 } from "lucide-react";
 import { StatsCard } from "@/components/StatsCard";
-import { CollegeLogo } from "@/components/CollegeLogo";
 import { NoticeCard } from "@/components/NoticeCard";
-import { CollegeCard } from "@/components/CollegeCard";
 import { SearchBar } from "@/components/SearchBar";
-import { colleges } from "@/data/colleges";
-import { getActiveNotices, getUpcomingDeadlines, getRecentNotices } from "@/data/notices";
-import { getFavorites, getDownloads, getNotifications } from "@/lib/store";
-import { formatDate, daysUntil, getCollegeName } from "@/lib/utils";
+import { getNotices, getCollegeShortNames } from "@/lib/services/admission";
+import { DashboardPersonalWatchlist, DashboardPersonalAlerts, DownloadsStat } from "./DashboardPersonal";
+import { daysUntil } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 const stagger = {
   animate: { transition: { staggerChildren: 0.06 } },
@@ -27,24 +23,19 @@ const fadeSlide = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } },
 } as const;
 
-export default function DashboardPage() {
-  const [favorites] = useState(getFavorites());
-  const [mounted, setMounted] = useState(false);
+export default async function DashboardPage() {
+  const [notices, collegeNames] = await Promise.all([getNotices(), getCollegeShortNames()]);
 
-  useEffect(() => { setMounted(true); }, []);
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
 
-  useEffect(() => {
-    fetch("/api/notifications/check", { method: "POST" }).catch(() => {});
-  }, []);
-
-  const activeNotices = getActiveNotices();
-  const upcomingDeadlines = getUpcomingDeadlines();
-  const recentNotices = getRecentNotices(7);
-  const favColleges = favorites.map((id) => colleges.find((c) => c.id === id)).filter(Boolean) as typeof colleges;
-  const downloads = getDownloads();
-  const notifications = getNotifications().slice(0, 5);
-
-  if (!mounted) return null;
+  const activeNotices = notices.filter((n) => n.status === "active");
+  const upcomingDeadlines = notices
+    .filter((n) => n.lastDate && new Date(n.lastDate) > now)
+    .sort((a, b) => new Date(a.lastDate!).getTime() - new Date(b.lastDate!).getTime());
+  const recentNotices = notices.filter((n) => n.publishedDate && new Date(n.publishedDate) >= weekAgo);
+  const latestNotices = activeNotices.length > 0 ? activeNotices : notices;
 
   const stats = [
     {
@@ -55,17 +46,11 @@ export default function DashboardPage() {
     {
       title: "Upcoming Deadlines", value: upcomingDeadlines.length,
       icon: <Clock className="h-5 w-5" />,
-      trend: { value: 3, positive: true },
     },
     {
       title: "New This Week", value: recentNotices.length,
       icon: <TrendingUp className="h-5 w-5" />,
       description: "New notices in 7 days",
-    },
-    {
-      title: "Downloads", value: downloads.length,
-      icon: <Download className="h-5 w-5" />,
-      description: "Total downloads",
     },
   ];
 
@@ -82,13 +67,16 @@ export default function DashboardPage() {
         <SearchBar />
       </motion.div>
 
-      <motion.div variants={fadeSlide} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((s, i) => (
           <motion.div key={s.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}>
             <StatsCard {...s} />
           </motion.div>
         ))}
-      </motion.div>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+          <DownloadsStat />
+        </motion.div>
+      </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <motion.div variants={fadeSlide} className="lg:col-span-2 space-y-4">
@@ -105,46 +93,16 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {activeNotices.slice(0, 5).map((notice, i) => (
+            {latestNotices.slice(0, 5).map((notice, i) => (
               <motion.div key={notice.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.05 }}>
-                <NoticeCard notice={notice} />
+                <NoticeCard notice={notice} collegeNames={collegeNames} />
               </motion.div>
             ))}
           </div>
         </motion.div>
 
         <motion.div variants={fadeSlide} className="space-y-6">
-          {favorites.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                Your Watchlist
-              </h2>
-              <div className="space-y-2">
-                {favColleges.slice(0, 3).map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/colleges/${c.id}`}
-                    className="flex items-center gap-3 rounded-xl border bg-white p-3 shadow-sm hover:shadow-md dark:bg-gray-900 dark:border-gray-800 transition-all"
-                  >
-                    <CollegeLogo collegeId={c.id} name={c.shortName} size="sm" />
-                    <div>
-                      <p className="text-sm font-medium">{c.shortName}</p>
-                      <p className="text-xs text-gray-400">{c.location}</p>
-                    </div>
-                  </Link>
-                ))}
-                {favColleges.length > 3 && (
-                  <Link
-                    href="/watchlist"
-                    className="block text-center text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 pt-1"
-                  >
-                    +{favColleges.length - 3} more
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
+          <DashboardPersonalWatchlist />
 
           <div className="space-y-3">
             <h2 className="font-semibold text-lg flex items-center gap-2">
@@ -165,7 +123,8 @@ export default function DashboardPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium line-clamp-1">{n.title}</p>
                       <p className="text-xs text-gray-400">
-                        {getCollegeName(n.collegeId)} &middot; {n.lastDate ? daysUntil(n.lastDate) : "?"} days left
+                        {n.collegeShortName ?? collegeNames[n.collegeId] ?? n.collegeId} &middot;{" "}
+                        {daysUntil(n.lastDate!)} days left
                       </p>
                     </div>
                   </Link>
@@ -174,29 +133,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="space-y-3">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <Bell className="h-5 w-5 text-purple-500" />
-              Recent Alerts
-            </h2>
-            {notifications.length === 0 ? (
-              <p className="text-sm text-gray-400">No new notifications</p>
-            ) : (
-              <div className="space-y-2">
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`rounded-xl border bg-white p-3 shadow-sm dark:bg-gray-900 dark:border-gray-800 ${
-                      !n.read ? "border-l-4 border-l-indigo-500" : ""
-                    }`}
-                  >
-                    <p className="text-sm font-medium">{n.title}</p>
-                    <p className="text-xs text-gray-400">{n.collegeName} &middot; {formatDate(n.createdAt)}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <DashboardPersonalAlerts />
         </motion.div>
       </div>
     </motion.div>

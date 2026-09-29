@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import { colleges, collegeTimelines } from "@/data/colleges";
-import { notices } from "@/data/notices";
-import { getComputedStatus } from "@/lib/utils";
+import { getColleges, getNotices } from "@/lib/services/admission";
 
 const PROVIDERS: Record<string, { baseUrl: string; defaultModel: string }> = {
   openrouter: { baseUrl: "https://openrouter.ai/api/v1", defaultModel: "openai/gpt-4o-mini" },
@@ -24,17 +22,16 @@ export async function GET() {
     return NextResponse.json({ error: "AI not configured" }, { status: 500 });
   }
 
+  const colleges = await getColleges();
+  const notices = await getNotices();
+
   const allColleges = colleges.map((c) =>
-    `- ${c.name} (${c.shortName}): ${c.type}, ${c.ownership}, ${c.district}, est. ${c.established}, courses: ${c.courses.length}, fees range: ${Math.min(...c.courses.map(cr => cr.fees))}-${Math.max(...c.courses.map(cr => cr.fees))}, courses: [${c.courses.map(cr => `${cr.name}(${cr.fees})`).join(", ")}]`
+    `- ${c.name} (${c.shortName}): ${c.type}, ${c.ownership}, ${c.district}, est. ${c.established ?? "?"}, courses: ${c.courses.length}, fees range: ${c.courses.length ? Math.min(...c.courses.map(cr => cr.fees)) : "?"}-${c.courses.length ? Math.max(...c.courses.map(cr => cr.fees)) : "?"}, courses: [${c.courses.map(cr => `${cr.name}(${cr.fees})`).join(", ")}]`
   ).join("\n");
 
-  const activeNotices = notices.filter((n) => getComputedStatus(n) === "active");
+  const activeNotices = notices.filter((n) => n.status === "active");
   const noticeSample = activeNotices.map((n) =>
     `- ${n.title} (college: ${n.collegeId}, type: ${n.type}, published: ${n.publishedDate}, lastDate: ${n.lastDate || "N/A"})`
-  ).join("\n");
-
-  const timelineSample = Object.entries(collegeTimelines).map(([id, tl]) =>
-    `- ${id}: currentStage=${tl.currentStage}, stages=${tl.stages.map(s => `${s.stage}(${s.date || "no-date"})`).join(" -> ")}`
   ).join("\n");
 
   const prompt = `You are a data verification assistant. Review ALL of the following Uttarakhand college admission data and identify ANY incorrect or implausible information based on your knowledge.
@@ -44,9 +41,6 @@ ${allColleges}
 
 ## All Active Notices (${activeNotices.length} total):
 ${noticeSample}
-
-## All Timelines (${Object.keys(collegeTimelines).length} total):
-${timelineSample}
 
 ## Verification Categories:
 1. **College Data**: established years, ownership (govt/private), college types, fee ranges, course appropriateness
@@ -90,7 +84,7 @@ Return JSON:
       lastVerified: new Date().toISOString(),
       collegesChecked: colleges.length,
       noticesChecked: notices.length,
-      timelinesChecked: Object.keys(collegeTimelines).length,
+      timelinesChecked: 0,
     });
   } catch (err: any) {
     console.error("Verify error:", err);

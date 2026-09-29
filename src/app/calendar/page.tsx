@@ -1,73 +1,32 @@
-"use client";
-
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  CalendarDays, ChevronLeft, ChevronRight, Bell,
-  ArrowRight,
-} from "lucide-react";
-import { notices } from "@/data/notices";
-import { formatDate, getCollegeShortName, noticeTypeColor, noticeTypeLabel } from "@/lib/utils";
+import { CalendarDays, Bell, ChevronLeft, ChevronRight } from "lucide-react";
+import { getNotices, getCollegeShortNames } from "@/lib/services/admission";
+import { CalendarGrid } from "./CalendarGrid";
 import { Notice } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 interface CalendarEvent { date: string; notice: Notice; label?: string }
 
-function getEvents(): CalendarEvent[] {
+export default async function CalendarPage() {
+  const [notices, collegeNames] = await Promise.all([
+    getNotices(),
+    getCollegeShortNames(),
+  ]);
+
   const events: CalendarEvent[] = [];
   notices.forEach((n) => {
-    events.push({ date: n.publishedDate, notice: n });
+    if (n.publishedDate) events.push({ date: n.publishedDate, notice: n });
     if (n.lastDate) events.push({ date: n.lastDate, notice: n });
-    n.importantDates.forEach((d) => {
-      events.push({ date: d.date, notice: n, label: d.label });
-    });
-    n.deadlines.forEach((d) => {
-      events.push({ date: d.date, notice: n, label: d.label });
-    });
+    n.importantDates.forEach((d) => events.push({ date: d.date, notice: n, label: d.label }));
+    n.deadlines.forEach((d) => events.push({ date: d.date, notice: n, label: d.label }));
   });
-  return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}
+  events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-export default function CalendarPage() {
-  const today = new Date();
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-
-  const events = useMemo(() => getEvents(), []);
-
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-
-  const monthEvents = useMemo(() => {
-    return events.filter((e) => {
-      const d = new Date(e.date);
-      return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
-    });
-  }, [events, viewMonth, viewYear]);
-
-  const upcomingEvents = useMemo(() => {
-    const now = new Date();
-    return events
-      .filter((e) => new Date(e.date) >= now)
-      .slice(0, 10);
-  }, [events]);
-
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); }
-    else { setViewMonth(viewMonth - 1); }
-  };
-
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); }
-    else { setViewMonth(viewMonth + 1); }
-  };
-
-  const getEventsForDay = (day: number) => {
-    const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return monthEvents.filter((e) => e.date.startsWith(dateStr));
-  };
+  const now = new Date();
+  const upcomingEvents = events
+    .filter((e) => new Date(e.date) >= now)
+    .slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -83,81 +42,7 @@ export default function CalendarPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-gray-900 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={prevMonth}
-                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <h2 className="text-lg font-semibold">
-                {MONTHS[viewMonth]} {viewYear}
-              </h2>
-              <button
-                onClick={nextMonth}
-                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {DAYS.map((d) => (
-                <div key={d} className="text-center text-xs font-medium text-gray-500 py-2">
-                  {d}
-                </div>
-              ))}
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="min-h-[80px] p-1" />
-              ))}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const dayEvents = getEventsForDay(day);
-                const isToday =
-                  day === today.getDate() &&
-                  viewMonth === today.getMonth() &&
-                  viewYear === today.getFullYear();
-
-                return (
-                  <div
-                    key={day}
-                    className={`min-h-[80px] rounded-lg border p-1 transition-colors ${
-                      isToday
-                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-400"
-                        : "border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-                    }`}
-                  >
-                    <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                        isToday
-                          ? "bg-indigo-600 text-white font-bold"
-                          : "text-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      {day}
-                    </span>
-                    <div className="mt-1 space-y-0.5">
-                      {dayEvents.slice(0, 2).map((e, idx) => (
-                        <Link
-                          key={idx}
-                          href={`/notices/${e.notice.id}`}
-                          className="block truncate rounded px-1 py-0.5 text-[10px] font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300"
-                        >
-                          {e.notice.title.slice(0, 20)}
-                        </Link>
-                      ))}
-                      {dayEvents.length > 2 && (
-                        <span className="block px-1 text-[10px] text-gray-400">
-                          +{dayEvents.length - 2} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <CalendarGrid events={events} />
         </div>
 
         <div className="space-y-4">
@@ -181,13 +66,14 @@ export default function CalendarPage() {
                         {new Date(e.date).getDate()}
                       </span>
                       <span className="text-[10px] text-gray-400">
-                        {MONTHS[new Date(e.date).getMonth()].slice(0, 3)}
+                        {new Date(e.date).toLocaleString("en", { month: "short" })}
                       </span>
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-medium line-clamp-1">{e.notice.title}</p>
                       <p className="text-[11px] text-gray-400">
-                        {getCollegeShortName(e.notice.collegeId)}
+                        {e.notice.collegeShortName ?? collegeNames[e.notice.collegeId] ?? e.notice.collegeId}
+                        {e.label ? ` · ${e.label}` : ""}
                       </p>
                     </div>
                   </Link>

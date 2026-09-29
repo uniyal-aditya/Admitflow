@@ -1,9 +1,7 @@
 import { NextRequest } from "next/server";
 import { streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import { colleges, collegeTimelines } from "@/data/colleges";
-import { notices } from "@/data/notices";
-import { getComputedStatus } from "@/lib/utils";
+import { getColleges, getNotices, getTimeline } from "@/lib/services/admission";
 
 const PROVIDERS: Record<string, { baseUrl: string; defaultModel: string }> = {
   openrouter: { baseUrl: "https://openrouter.ai/api/v1", defaultModel: "openai/gpt-4o-mini" },
@@ -11,16 +9,24 @@ const PROVIDERS: Record<string, { baseUrl: string; defaultModel: string }> = {
   google: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", defaultModel: "gemini-2.0-flash" },
 };
 
-function buildSystemPrompt(): string {
+async function buildSystemPrompt(): Promise<string> {
+  // Answer from the canonical DB (service layer) — statuses are engine-derived.
+  const colleges = await getColleges();
+  const notices = await getNotices();
+  const timelines = await Promise.all(
+    colleges.slice(0, 40).map(async (c) => ({ id: c.id, tl: await getTimeline(c.id) })),
+  );
+  const timelineById = Object.fromEntries(timelines.map((t) => [t.id, t.tl]));
+
   const govt = colleges.filter((c) => c.ownership === "government");
   const priv = colleges.filter((c) => c.ownership === "private" || c.ownership === "deemed");
-  const activeNotices = notices.filter((n) => getComputedStatus(n) === "active");
-  const deadlines = notices
-    .filter((n) => n.lastDate && getComputedStatus(n) === "active")
+  const activeNotices = notices.filter((n) => n.status === "active");
+  const deadlines = activeNotices
+    .filter((n) => n.lastDate)
     .sort((a, b) => new Date(a.lastDate!).getTime() - new Date(b.lastDate!).getTime());
 
   const collegeList = colleges.map((c) => {
-    const tl = collegeTimelines[c.id];
+    const tl = timelineById[c.id];
     const currentStage = tl?.stages.find((s) => s.status === "current" || s.status === "completed");
     return `\u2022 ${c.shortName} \u2014 ${c.location} (${c.type}, ${c.ownership}) \u2014 ${c.courses.length} programs \u2014 Website: ${c.website}${currentStage ? ` \u2014 Current: ${currentStage.label}` : ""}`;
   });
@@ -67,7 +73,7 @@ export async function POST(req: NextRequest) {
     const prov = PROVIDERS[provider] || PROVIDERS.openrouter;
     const client = createOpenAI({ baseURL: prov.baseUrl, apiKey: key });
 
-    const systemPrompt = buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt();
 
     const result = streamText({
       model: client(modelName),

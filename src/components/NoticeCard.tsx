@@ -5,9 +5,17 @@ import { Download, ExternalLink, Calendar, Clock } from "lucide-react";
 import { Notice } from "@/types";
 import { noticeTypeColor, noticeTypeLabel, formatDate, getCollegeShortName, daysUntil, getComputedStatus, getNoticeSourceUrl } from "@/lib/utils";
 
-export function NoticeCard({ notice }: { notice: Notice }) {
+export function NoticeCard({
+  notice,
+  collegeNames,
+}: {
+  notice: Notice;
+  /** Service-resolved id→shortName map (preferred). Falls back to legacy static data. */
+  collegeNames?: Record<string, string>;
+}) {
   const computedStatus = getComputedStatus(notice);
-  const collegeName = getCollegeShortName(notice.collegeId);
+  const collegeName =
+    notice.collegeShortName ?? collegeNames?.[notice.collegeId] ?? getCollegeShortName(notice.collegeId);
   const days = notice.lastDate ? daysUntil(notice.lastDate) : null;
 
   return (

@@ -1,26 +1,25 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Download, ExternalLink, Calendar, Clock,
+  ArrowLeft, Calendar, Clock,
   FileText, CheckCircle, AlertTriangle, Info, BookOpen,
-  Users, DollarSign, GraduationCap, ChevronRight,
+  Users, GraduationCap, ChevronRight,
 } from "lucide-react";
-import { notices } from "@/data/notices";
-import { colleges } from "@/data/colleges";
+import { getNoticeById, getNotices } from "@/lib/services/admission";
 import { NoticeCard } from "@/components/NoticeCard";
+import { NoticeDownloadActions } from "@/components/NoticeDownloadActions";
 import {
-  noticeTypeColor, noticeTypeLabel, formatDate, getCollegeName,
-  getCollegeShortName, daysUntil, isDatePassed, getCollege, getComputedStatus,
-  getNoticeSourceUrl,
+  noticeTypeColor, noticeTypeLabel, formatDate, daysUntil, isDatePassed,
 } from "@/lib/utils";
-import { addDownload } from "@/lib/store";
 
-export default function NoticeDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
-  const notice = notices.find((n) => n.id === id);
+export const dynamic = "force-dynamic";
+
+export default async function NoticeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [notice, allNotices] = await Promise.all([getNoticeById(id), getNotices()]);
 
   if (!notice) {
     return (
@@ -32,60 +31,11 @@ export default function NoticeDetailPage() {
     );
   }
 
-  const college = getCollege(notice.collegeId);
-  const related = notices.filter((n) => notice.relatedNoticeIds.includes(n.id));
+  const related = allNotices.filter((n) => notice.relatedNoticeIds.includes(n.id));
   const days = notice.lastDate ? daysUntil(notice.lastDate) : null;
-  const computedStatus = getComputedStatus(notice);
-
-  const handleDownloadNotice = () => {
-    window.open(getNoticeSourceUrl(notice), "_blank", "noopener");
-  };
-
-  const handleDownloadSummary = () => {
-    addDownload({
-      id: `${Date.now()}`,
-      noticeId: notice.id,
-      noticeTitle: notice.title,
-      collegeName: getCollegeName(notice.collegeId),
-      downloadedAt: new Date().toISOString(),
-    });
-
-    const content = [
-      `${notice.title}`,
-      `College: ${getCollegeName(notice.collegeId)}`,
-      `Published: ${notice.publishedDate}`,
-      notice.lastDate ? `Last Date: ${notice.lastDate}` : "",
-      "",
-      notice.summary,
-      "",
-      "Highlights:",
-      ...notice.highlights.map((h) => `  - ${h}`),
-      "",
-      "Important Dates:",
-      ...notice.importantDates.map((d) => `  ${d.label}: ${d.date}`),
-      "",
-      "Deadlines:",
-      ...notice.deadlines.map((d) => `  ${d.label}: ${d.date}`),
-      "",
-      `Eligibility: ${notice.eligibility}`,
-      "",
-      "Documents Required:",
-      ...notice.documentsRequired.map((d) => `  - ${d}`),
-      `\nSource: ${notice.sourceUrl}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${notice.id}-summary.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const computedStatus = notice.status;
+  const collegeId = notice.collegeId;
+  const collegeShortName = notice.collegeShortName;
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -104,8 +54,8 @@ export default function NoticeDetailPage() {
           </span>
           <span className="text-sm text-gray-400">
             via{" "}
-            <Link href={`/colleges/${notice.collegeId}`} className="text-indigo-600 hover:underline dark:text-indigo-400">
-              {getCollegeShortName(notice.collegeId)}
+            <Link href={`/colleges/${collegeId}`} className="text-indigo-600 hover:underline dark:text-indigo-400">
+              {collegeShortName ?? collegeId}
             </Link>
           </span>
           {computedStatus === "active" ? (
@@ -158,29 +108,7 @@ export default function NoticeDetailPage() {
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            onClick={handleDownloadNotice}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Official Notice
-          </button>
-          <button
-            onClick={handleDownloadSummary}
-            className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Download Summary
-          </button>
-          <a
-            href={getNoticeSourceUrl(notice)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" />
-            College Website
-          </a>
+          <NoticeDownloadActions notice={notice} />
         </div>
       </div>
 
@@ -270,14 +198,14 @@ export default function NoticeDetailPage() {
         )}
       </div>
 
-      {college && (
+      {collegeId && (
         <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
           <h3 className="font-semibold text-sm mb-2">College Information</h3>
           <Link
-            href={`/colleges/${college.id}`}
+            href={`/colleges/${collegeId}`}
             className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
           >
-            View {college.shortName} profile
+            View {collegeShortName ?? collegeId} profile
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>

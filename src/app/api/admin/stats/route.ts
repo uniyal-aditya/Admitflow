@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
-import { colleges } from "@/data/colleges";
-import { notices } from "@/data/notices";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -24,26 +22,22 @@ export async function GET() {
       return NextResponse.json({ error: auth.reason }, { status: auth.reason === "ADMIN_EMAIL not configured" ? 500 : 401 });
     }
 
-    const collegeTypes = colleges.reduce<Record<string, number>>((acc, c) => {
-      acc[c.type] = (acc[c.type] || 0) + 1;
-      return acc;
-    }, {});
+    // Dataset aggregates now come from the canonical tables (the static
+    // files no longer back any server data path).
+    const now = new Date();
+    const [collegeTypeRows, collegeOwnershipRows, noticeTypeRows, collegeTotal, noticeTotal, activeNotices] = await Promise.all([
+      prisma.college.groupBy({ by: ["type"], _count: { _all: true } }),
+      prisma.college.groupBy({ by: ["ownership"], _count: { _all: true } }),
+      prisma.notice.groupBy({ by: ["type"], _count: { _all: true } }),
+      prisma.college.count(),
+      prisma.notice.count(),
+      // Engine-consistent "not expired": no deadline date already in the past.
+      prisma.notice.count({ where: { dates: { none: { kind: "deadline", date: { lt: now } } } } }),
+    ]);
 
-    const collegeOwnership = colleges.reduce<Record<string, number>>((acc, c) => {
-      acc[c.ownership] = (acc[c.ownership] || 0) + 1;
-      return acc;
-    }, {});
-
-    const noticeByType = notices.reduce<Record<string, number>>((acc, n) => {
-      acc[n.type] = (acc[n.type] || 0) + 1;
-      return acc;
-    }, {});
-
-    const activeNotices = notices.filter((n) => {
-      const now = new Date();
-      if (n.lastDate && new Date(n.lastDate) < now) return false;
-      return true;
-    }).length;
+    const collegeTypes = Object.fromEntries(collegeTypeRows.map((r) => [r.type, r._count._all]));
+    const collegeOwnership = Object.fromEntries(collegeOwnershipRows.map((r) => [r.ownership, r._count._all]));
+    const noticeByType = Object.fromEntries(noticeTypeRows.map((r) => [r.type, r._count._all]));
 
     const [
       totalUsers,
@@ -91,12 +85,12 @@ export async function GET() {
   return NextResponse.json({
     data: {
       colleges: {
-        total: colleges.length,
+        total: collegeTotal,
         byType: collegeTypes,
         byOwnership: collegeOwnership,
       },
       notices: {
-        total: notices.length,
+        total: noticeTotal,
         active: activeNotices,
         byType: noticeByType,
       },

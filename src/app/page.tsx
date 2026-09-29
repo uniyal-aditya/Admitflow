@@ -26,8 +26,8 @@ const features = [
     desc: "Track admission trends, notice patterns, and important statistics.",
   },
   {
-    icon: Sparkles, title: "AI Summaries",
-    desc: "Get AI-generated summaries of lengthy PDF notices. No need to read 20-page documents.",
+    icon: Sparkles, title: "Live Status Tracking",
+    desc: "Notices, timelines, and deadlines update automatically as dates pass — no stale pages, no guesswork.",
   },
   {
     icon: Shield, title: "Reliable & Free",
@@ -39,9 +39,11 @@ const features = [
   },
 ];
 
+// Real dataset counts (74 colleges / 20 notices / 11 types) — kept as plain
+// data so the landing page never overstates coverage.
 const stats = [
-  { label: "Colleges Covered", value: "30+" },
-  { label: "Active Notices", value: "75+" },
+  { label: "Colleges Covered", value: "74" },
+  { label: "Notices Indexed", value: "20" },
   { label: "Notice Types", value: "11" },
   { label: "Free Forever", value: "₹0" },
 ];

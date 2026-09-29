@@ -127,6 +127,12 @@ export async function getDistricts(): Promise<string[]> {
   return rows.map((r) => r.district);
 }
 
+/** id → shortName map (service-resolved names; DB-created colleges included). */
+export async function getCollegeShortNames(): Promise<Record<string, string>> {
+  const rows = await prisma.college.findMany({ select: { id: true, shortName: true } });
+  return Object.fromEntries(rows.map((r) => [r.id, r.shortName]));
+}
+
 // ─── Notices ─────────────────────────────────────────────────────────────
 
 function isoDate(d: Date | null): string {
@@ -143,6 +149,7 @@ function isoDate(d: Date | null): string {
 export function noticeRowToViewModel(row: {
   id: string;
   collegeId: string | null;
+  college?: { shortName: string } | null;
   title: string;
   type: string;
   publishedAt: Date | null;
@@ -164,6 +171,7 @@ export function noticeRowToViewModel(row: {
   return {
     id: row.id,
     collegeId: row.collegeId ?? "",
+    collegeShortName: row.college?.shortName,
     title: row.title,
     type: row.type as Notice["type"],
     publishedDate: isoDate(row.publishedAt),
@@ -185,6 +193,7 @@ export function noticeRowToViewModel(row: {
 
 export const noticeInclude = {
   dates: { select: { kind: true, label: true, date: true }, orderBy: { date: "asc" as const } },
+  college: { select: { shortName: true } },
 } as const;
 
 export async function getNotices(): Promise<Notice[]> {

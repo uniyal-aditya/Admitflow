@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth";
-import { notices } from "@/data/notices";
+import { getNotices } from "@/lib/services/admission";
 import { sendPushToUser } from "@/lib/webpush";
 import { sendEmail } from "@/lib/email";
 import { emailTemplate } from "@/lib/email-template";
@@ -38,6 +38,7 @@ export async function POST() {
     });
     const alreadyNotified = new Set(existingNotifs.map((n) => n.noticeId));
 
+    const notices = await getNotices();
     const matching = notices.filter((n) => {
       if (alreadyNotified.has(n.id)) return false;
       if (!selectedTypes.includes(n.type)) return false;

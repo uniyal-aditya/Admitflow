@@ -38,6 +38,8 @@ export interface Course {
 export interface Notice {
   id: string;
   collegeId: string;
+  /** Short name resolved server-side from the DB; absent on legacy static data. */
+  collegeShortName?: string;
   title: string;
   type: NoticeType;
   publishedDate: string;
