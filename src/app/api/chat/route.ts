@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { getSession } from "@/lib/auth";
 import { getColleges, getNotices, getTimeline } from "@/lib/services/admission";
 
 const PROVIDERS: Record<string, { baseUrl: string; defaultModel: string }> = {
@@ -55,6 +56,13 @@ Keep answers short, specific, and cite data. If you don't know something, say so
 
 export async function POST(req: NextRequest) {
   try {
+    // LLM calls cost real money — restrict to signed-in users (the chat UI
+    // only renders post-login; middleware rate limiting still applies).
+    const session = await getSession();
+    if (!session?.id) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { message } = await req.json();
     if (!message) {
       return Response.json({ error: "Message is required" }, { status: 400 });

@@ -2,9 +2,19 @@ node_modules
 .next
 # Keep environment variables out of version control
 .env
+.env*
 
 /src/generated/prisma
 opencode_chat_image/
 
 .vercel
 .env*
+
+# local databases / sqlite artifacts (legacy dev DB must never be tracked)
+*.db
+*.sqlite
+*.sqlite3
+prisma/dev.db*
+
+# build info
+*.tsbuildinfo
