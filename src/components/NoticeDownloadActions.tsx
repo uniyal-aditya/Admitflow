@@ -10,7 +10,9 @@ import { Notice } from "@/types";
 // component.
 
 export function NoticeDownloadActions({ notice }: { notice: Notice }) {
-  const handleDownloadSummary = () => {
+  const trackDownload = () => {
+    // Local record is immediate; the DB record syncs for signed-in users
+    // (fire-and-forget — a failure must not block the download).
     addDownload({
       id: `${Date.now()}`,
       noticeId: notice.id,
@@ -18,6 +20,19 @@ export function NoticeDownloadActions({ notice }: { notice: Notice }) {
       collegeName: notice.collegeShortName ?? notice.collegeId,
       downloadedAt: new Date().toISOString(),
     });
+    fetch("/api/user/downloads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        noticeId: notice.id,
+        noticeTitle: notice.title,
+        collegeName: notice.collegeShortName ?? notice.collegeId,
+      }),
+    }).catch(() => {});
+  };
+
+  const handleDownloadSummary = () => {
+    trackDownload();
 
     const content = [
       `${notice.title}`,

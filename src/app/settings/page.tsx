@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Moon, Sun, Bell, Mail, Smartphone, Globe, Clock, Check } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -28,24 +28,77 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>(getSettings());
   const [saved, setSaved] = useState(false);
   const [email, setEmail] = useState("");
+  const [dbSynced, setDbSynced] = useState(false);
 
+  // On mount: local settings render instantly; signed-in users then adopt
+  // their DB settings as the source of truth.
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => { if (d.email) setEmail(d.email); })
       .catch(() => {});
-    const interval = setInterval(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/user/state", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings) {
+            setSettings((prev) => ({
+              ...prev,
+              notificationTypes: data.settings.notificationTypes,
+              scanFrequency: data.settings.scanFrequency,
+              language: data.settings.language,
+              emailNotifications: data.settings.emailNotifications,
+              deviceNotifications: data.settings.deviceNotifications,
+            }));
+            setDbSynced(true);
+          }
+        }
+      } catch {
+        /* guest: local settings only */
+      }
+    })();
+  }, []);
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
       if (settings.deviceNotifications) fetch("/api/notifications/check", { method: "POST" }).catch(() => {});
     }, 300000);
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [settings.deviceNotifications]);
 
   function update(key: keyof UserSettings, value: any) {
     const next = { ...settings, [key]: value };
     setSettings(next);
     persistSettings(next);
+    // Signed-in: persist the server-side subset to the DB (local persist
+    // stays authoritative for view prefs like theme + startOnBoot).
+    if (dbSynced) {
+      void syncDbSettings(next);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function syncDbSettings(s: UserSettings) {
+    try {
+      await fetch("/api/user/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notificationTypes: s.notificationTypes,
+          scanFrequency: s.scanFrequency,
+          language: s.language,
+          emailNotifications: s.emailNotifications,
+          deviceNotifications: s.deviceNotifications,
+        }),
+      });
+    } catch {
+      /* offline: local persists; DB catches up on next change */
+    }
   }
 
   function toggleNoticeType(type: string) {

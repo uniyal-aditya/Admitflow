@@ -3,14 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Star, Heart, Bell, ArrowRight, BookOpen } from "lucide-react";
-import { getFavorites, getNotifications, markAllNotificationsRead } from "@/lib/store";
+import { useFavorites } from "@/hooks/useFavorites";
 import { NoticeCard } from "@/components/NoticeCard";
+import { getNotifications, markAllNotificationsRead } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 import { Notice } from "@/types";
 
-// Watchlist interactivity: favorites + notification history live in
-// localStorage today; Phase 7 moves favorites to the user record and this
-// component's data source changes, not its slots.
+interface DbNotification {
+  id: string;
+  title: string;
+  message: string;
+  collegeName: string;
+  read: boolean;
+  createdAt: string;
+}
+
+// Watchlist interactivity: favorites come from the DB for signed-in users
+// (localStorage for guests) via the shared useFavorites hook; notification
+// history reads the DB via /api/notifications with a localStorage fallback.
 
 export function WatchlistClient({
   notices,
@@ -19,27 +29,73 @@ export function WatchlistClient({
   notices: Notice[];
   collegeNames: Record<string, string>;
 }) {
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [notifications, setNotifications] = useState<ReturnType<typeof getNotifications>>([]);
+  const { favorites, ready } = useFavorites();
+  const [notifications, setNotifications] = useState<DbNotification[]>([]);
+  const [usingDbNotifications, setUsingDbNotifications] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setFavorites(getFavorites());
-    setNotifications(getNotifications());
-    setMounted(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/notifications", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) {
+            setNotifications(
+              (Array.isArray(data) ? data : []).map((n: { id: string; title: string; message: string; collegeName: string; read: boolean; createdAt: string }) => ({
+                id: n.id,
+                title: n.title,
+                message: n.message,
+                collegeName: n.collegeName,
+                read: n.read,
+                createdAt: n.createdAt,
+              })),
+            );
+            setUsingDbNotifications(true);
+          }
+          return;
+        }
+      } catch {
+        /* guest / offline → local */
+      }
+      if (!cancelled) setNotifications(getNotifications());
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => setMounted(true), []);
 
   const favNotices = notices.filter((n) => favorites.includes(n.collegeId) && n.status !== "expired");
   const favDeadlines = favNotices
     .filter((n) => n.lastDate && new Date(n.lastDate) > new Date())
     .sort((a, b) => new Date(a.lastDate!).getTime() - new Date(b.lastDate!).getTime());
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
+    if (usingDbNotifications) {
+      try {
+        await fetch("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markAllRead: true }),
+        });
+        const res = await fetch("/api/notifications", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data);
+          return;
+        }
+      } catch {
+        /* fall through to local */
+      }
+    }
     markAllNotificationsRead();
     setNotifications(getNotifications());
   };
 
-  if (!mounted) return null;
+  if (!mounted || !ready) return null;
 
   return (
     <div className="space-y-8">
@@ -111,7 +167,7 @@ export function WatchlistClient({
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Notification History</h2>
                 <button
-                  onClick={handleMarkAllRead}
+                  onClick={() => void handleMarkAllRead()}
                   className="text-sm text-indigo-600 hover:underline dark:text-indigo-400"
                 >
                   Mark all as read

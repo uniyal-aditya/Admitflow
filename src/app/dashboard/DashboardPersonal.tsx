@@ -4,18 +4,35 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, Download, Star } from "lucide-react";
 import { CollegeLogo } from "@/components/CollegeLogo";
-import { getFavorites, getDownloads, getNotifications } from "@/lib/store";
+import { useFavorites } from "@/hooks/useFavorites";
+import { getDownloads, getNotifications } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 
-// Client island for the personal slice of the dashboard. Data lives in
-// localStorage today; Phase 7 moves favorites/settings to the user record and
-// this island's data source changes, not its slots.
+// Client island for the personal slice of the dashboard. Signed-in users
+// read favorites/downloads from the DB (via /api/user/state and the shared
+// useFavorites hook); guests fall back to localStorage.
 
-/** Downloads counter from localStorage (per-browser, not per-user yet). */
+/** Downloads counter: DB for signed-in users, localStorage for guests. */
 export function DownloadsStat() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    setCount(getDownloads().length);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/state", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setCount(data.downloads.length);
+          return;
+        }
+      } catch {
+        /* fall through to local */
+      }
+      if (!cancelled) setCount(getDownloads().length);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   return (
     <StatsCardShell
@@ -44,13 +61,10 @@ function StatsCardShell({ title, value, icon, description }: { title: string; va
 
 /** Favorites watchlist; resolves names via the static dataset fallback until Phase 7 wires DB favorites. */
 export function DashboardPersonalWatchlist() {
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const { favorites, ready } = useFavorites();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setFavorites(getFavorites());
-    setMounted(true);
-  }, []);
-  if (!mounted || favorites.length === 0) return null;
+  useEffect(() => setMounted(true), []);
+  if (!mounted || !ready || favorites.length === 0) return null;
 
   return (
     <div className="space-y-3">
@@ -107,7 +121,7 @@ function WatchlistRow({ id }: { id: string }) {
   );
 }
 
-/** Recent local notifications with mark-all-read. */
+/** Recent local notifications with mark-all-read (local until Phase 7+ notice; DB notifications land via /api/notifications). */
 export function DashboardPersonalAlerts() {
   const [notifications, setNotifications] = useState<ReturnType<typeof getNotifications>>([]);
   const [mounted, setMounted] = useState(false);

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { Star, MapPin, ExternalLink } from "lucide-react";
 import { College } from "@/types";
-import { useSyncFavorite } from "@/hooks/useSyncFavorite";
+import { useFavorites } from "@/hooks/useFavorites";
 import { collegeTypeLabel } from "@/lib/utils";
 import { CollegeLogo } from "@/components/CollegeLogo";
 
 export function CollegeCard({ college }: { college: College }) {
-  const [isFav, toggleFav] = useSyncFavorite(college.id);
+  const { favorites, toggle } = useFavorites();
+  const isFav = favorites.includes(college.id);
+  const toggleFav = () => void toggle(college.id);
 
   return (
     <div className="group rounded-xl border bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900 dark:border-gray-800">
