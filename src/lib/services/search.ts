@@ -148,8 +148,8 @@ export interface NoticeFilters {
   limit?: number;
 }
 
-function noticeWhere(f: NoticeFilters): Prisma.AdmissionNoticeWhereInput {
-  const where: Prisma.AdmissionNoticeWhereInput = {};
+function noticeWhere(f: NoticeFilters): Prisma.NoticeWhereInput {
+  const where: Prisma.NoticeWhereInput = {};
   const q = f.q ? normalize(f.q) : "";
   if (q) {
     where.OR = [
@@ -170,7 +170,7 @@ function noticeWhere(f: NoticeFilters): Prisma.AdmissionNoticeWhereInput {
 }
 
 export async function searchNotices(f: NoticeFilters): Promise<Notice[]> {
-  const rows = await prisma.admissionNotice.findMany({
+  const rows = await prisma.notice.findMany({
     where: noticeWhere(f),
     orderBy: { publishedAt: "desc" },
     take: f.limit,
@@ -180,7 +180,7 @@ export async function searchNotices(f: NoticeFilters): Promise<Notice[]> {
 }
 
 export async function countNotices(f: NoticeFilters): Promise<number> {
-  return prisma.admissionNotice.count({ where: noticeWhere(f) });
+  return prisma.notice.count({ where: noticeWhere(f) });
 }
 
 /** Programs + branches for search suggestion chips. */

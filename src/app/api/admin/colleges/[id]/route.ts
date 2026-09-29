@@ -26,7 +26,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const body = await req.json();
 
-    const college = await prisma.college.update({ where: { id }, data: body });
+    // Allowlist only real College columns (admissionPortal/courses were
+    // dropped in Phase 5; blind spreads now fail schema validation).
+    const data: Record<string, unknown> = {};
+    for (const field of [
+      "name", "shortName", "type", "ownership", "location", "district",
+      "website", "contactPhone", "contactEmail", "description",
+      "accreditation", "affiliation", "principal", "imageUrl",
+    ]) {
+      if (body[field] !== undefined) data[field] = body[field];
+    }
+    if (body.established !== undefined) {
+      data.established =
+        body.established === null || body.established === ""
+          ? null
+          : parseInt(body.established, 10) || body.established;
+    }
+
+    const college = await prisma.college.update({ where: { id }, data });
     return NextResponse.json(college);
   } catch (error) {
     console.error("Error updating college:", error);

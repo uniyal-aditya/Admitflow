@@ -401,7 +401,7 @@ function planRows() {
     }
   }
 
-  // Notices (canonical AdmissionNotice) + dates
+  // Notices (canonical Notice) + dates
   report.planned.admissionNotices = notices.length;
   for (const n of notices) {
     let dateCount = 0;
@@ -742,15 +742,15 @@ async function applyToDb(prisma: PrismaClient, planned: ReturnType<typeof planRo
     };
   });
   const existingNoticeIds = new Set(
-    (await withRetry("notices:prefetch", () => prisma.admissionNotice.findMany({ select: { id: true } }))).map((n) => n.id),
+    (await withRetry("notices:prefetch", () => prisma.notice.findMany({ select: { id: true } }))).map((n) => n.id),
   );
   const newNotices = noticeRows.filter((n) => !existingNoticeIds.has(n.id));
   if (newNotices.length) {
-    await withRetry("notices", () => prisma.admissionNotice.createMany({ data: newNotices }));
+    await withRetry("notices", () => prisma.notice.createMany({ data: newNotices }));
   }
   const noticeUpdates = noticeRows
     .filter((n) => existingNoticeIds.has(n.id))
-    .map((n) => prisma.admissionNotice.update({ where: { id: n.id }, data: n }));
+    .map((n) => prisma.notice.update({ where: { id: n.id }, data: n }));
   if (noticeUpdates.length) {
     await withRetry("notices:update", () => prisma.$transaction(noticeUpdates));
   }
@@ -767,9 +767,9 @@ async function applyToDb(prisma: PrismaClient, planned: ReturnType<typeof planRo
     return rows.filter((d) => !Number.isNaN(d.date.getTime()));
   });
   await withRetry("noticeDates", async () => {
-    await prisma.admissionNoticeDate.deleteMany({});
+    await prisma.noticeDate.deleteMany({});
     if (noticeDateRows.length) {
-      await prisma.admissionNoticeDate.createMany({ data: noticeDateRows });
+      await prisma.noticeDate.createMany({ data: noticeDateRows });
     }
   });
   track("noticeDates", noticeDateRows.length);
@@ -780,9 +780,9 @@ async function applyToDb(prisma: PrismaClient, planned: ReturnType<typeof planRo
     .map((n) => {
       const src = notices.find((x) => x.id === n.id)!;
       return {
-        id: `AdmissionNotice:${n.id}:officialUrl`,
+        id: `Notice:${n.id}:officialUrl`,
         sourceId: sourceIdFor(`Notice source: ${src.title}`, src.sourceUrl!),
-        entityType: "AdmissionNotice",
+        entityType: "Notice",
         entityId: n.id,
         fieldPath: "officialUrl",
       };
@@ -842,15 +842,14 @@ async function verifyDb(prisma: PrismaClient): Promise<string[]> {
   const problems: string[] = [];
   const dbColleges = await prisma.college.count();
   if (dbColleges < colleges.length) problems.push(`College count in DB (${dbColleges}) < source (${colleges.length})`);
-  const dbNotices = await prisma.admissionNotice.count();
-  if (dbNotices < notices.length) problems.push(`AdmissionNotice count in DB (${dbNotices}) < source (${notices.length})`);
+  const dbNotices = await prisma.notice.count();
+  if (dbNotices < notices.length) problems.push(`Notice count in DB (${dbNotices}) < source (${notices.length})`);
   const offerings = await prisma.courseOffering.count();
   const fees = await prisma.feeStructure.count();
   const stages = await prisma.legacyTimelineStage.count();
   const sources = await prisma.source.count({ where: { verification: "unverified" } });
   const verified = await prisma.source.count({ where: { verification: "verified" } });
-  const invented = await prisma.college.count({ where: { admissionPortal: { not: null } } });
-  if (invented > 0) problems.push(`${invented} colleges still carry legacy pattern-generated admissionPortal values`);
+
   const attributions = await prisma.attribution.count();
 
   return [
@@ -889,8 +888,8 @@ function renderReport(): string {
   L.push(`| College | ${report.planned.colleges} |`);
   L.push(`| CourseOffering | ${report.planned.offerings} |`);
   L.push(`| FeeStructure | ${report.planned.fees} |`);
-  L.push(`| AdmissionNotice | ${report.planned.admissionNotices} |`);
-  L.push(`| AdmissionNoticeDate | ${report.planned.noticeDates} |`);
+  L.push(`| Notice | ${report.planned.admissionNotices} |`);
+  L.push(`| NoticeDate | ${report.planned.noticeDates} |`);
   L.push(`| LegacyTimelineStage | ${report.planned.timelineStages} |`);
   L.push(``);
   if (report.inserted) {

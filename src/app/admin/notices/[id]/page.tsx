@@ -6,7 +6,14 @@ import { Loader2, ArrowLeft, Plus, Trash2, Search } from "lucide-react"
 import Link from "next/link"
 
 const noticeTypes = ["admission", "registration", "counselling", "spot_round", "vacant_seat", "merit_list", "waiting_list", "fee_payment", "reporting", "extension", "general"]
-const statusOptions = ["active", "upcoming", "expired"]
+const editorialStatuses = ["published", "draft", "archived"]
+const dateKinds = ["deadline", "important_date"]
+
+interface StructuredDate {
+  kind: string
+  label: string
+  date: string
+}
 
 export default function EditNoticePage() {
   const router = useRouter()
@@ -25,19 +32,13 @@ export default function EditNoticePage() {
     type: "admission",
     publishedDate: "",
     lastDate: "",
-    status: "active",
+    editorialStatus: "published",
     summary: "",
+    officialUrl: "",
     pdfUrl: "",
-    sourceUrl: "",
-    eligibility: "",
   })
-
-  const [highlights, setHighlights] = useState<string[]>([])
-  const [coursesAffected, setCoursesAffected] = useState<string[]>([])
-  const [branchesAffected, setBranchesAffected] = useState<string[]>([])
-  const [deadlines, setDeadlines] = useState<string[]>([])
   const [documentsRequired, setDocumentsRequired] = useState<string[]>([])
-  const [importantDates, setImportantDates] = useState<string[]>([])
+  const [dates, setDates] = useState<StructuredDate[]>([])
 
   useEffect(() => {
     fetchNotice()
@@ -55,26 +56,28 @@ export default function EditNoticePage() {
         return
       }
       if (!res.ok) throw new Error("Notice not found")
-      const data = await res.json()
-      const notice = data.notice || data
+      const notice = await res.json()
       setTitle(notice.title || "")
+      const allDates: StructuredDate[] = (notice.dates || []).map((d: { kind: string; label: string; date: string }) => ({
+        kind: d.kind,
+        label: d.label,
+        date: typeof d.date === "string" ? d.date.slice(0, 10) : "",
+      }))
+      // The legacy "Last Date" deadline is edited via its own field, not the
+      // structured-dates list.
+      const lastDateRow = allDates.find((d) => d.kind === "deadline" && d.label === "Last Date")
+      setDates(allDates.filter((d) => d !== lastDateRow))
       setForm({
         collegeId: notice.collegeId || "",
         type: notice.type || "admission",
-        publishedDate: notice.publishedDate ? notice.publishedDate.slice(0, 10) : "",
-        lastDate: notice.lastDate ? notice.lastDate.slice(0, 10) : "",
-        status: notice.status || "active",
+        publishedDate: notice.publishedAt ? String(notice.publishedAt).slice(0, 10) : "",
+        lastDate: lastDateRow?.date || "",
+        editorialStatus: notice.status || "published",
         summary: notice.summary || "",
+        officialUrl: notice.officialUrl || "",
         pdfUrl: notice.pdfUrl || "",
-        sourceUrl: notice.sourceUrl || "",
-        eligibility: notice.eligibility || "",
       })
-      setHighlights(notice.highlights || [])
-      setCoursesAffected(notice.coursesAffected || [])
-      setBranchesAffected(notice.branchesAffected || [])
-      setDeadlines(notice.deadlines || [])
       setDocumentsRequired(notice.documentsRequired || [])
-      setImportantDates(notice.importantDates || [])
     } catch {
       setMessage({ type: "error", text: "Failed to load notice" })
     } finally {
@@ -86,16 +89,8 @@ export default function EditNoticePage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  function addArrayItem(arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>) {
-    setArr([...arr, ""])
-  }
-
-  function removeArrayItem(arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, index: number) {
-    setArr(arr.filter((_, i) => i !== index))
-  }
-
-  function updateArrayItem(arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, index: number, value: string) {
-    setArr(arr.map((item, i) => (i === index ? value : item)))
+  function updateDate(i: number, key: keyof StructuredDate, value: string) {
+    setDates((prev) => prev.map((d, idx) => (idx === i ? { ...d, [key]: value } : d)))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -110,12 +105,10 @@ export default function EditNoticePage() {
         body: JSON.stringify({
           title,
           ...form,
-          highlights: highlights.filter(Boolean),
-          coursesAffected: coursesAffected.filter(Boolean),
-          branchesAffected: branchesAffected.filter(Boolean),
-          deadlines: deadlines.filter(Boolean),
           documentsRequired: documentsRequired.filter(Boolean),
-          importantDates: importantDates.filter(Boolean),
+          dates: dates
+            .filter((d) => d.label && d.date)
+            .map((d) => ({ kind: d.kind, label: d.label, date: d.date })),
         }),
       })
 
@@ -153,7 +146,7 @@ export default function EditNoticePage() {
           <label className="block text-sm font-medium">{label}</label>
           <button
             type="button"
-            onClick={() => addArrayItem(items, setItems)}
+            onClick={() => setItems([...items, ""])}
             className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             <Plus size={12} />
@@ -166,12 +159,12 @@ export default function EditNoticePage() {
               <input
                 type="text"
                 value={item}
-                onChange={(e) => updateArrayItem(items, setItems, i, e.target.value)}
+                onChange={(e) => setItems(items.map((v, idx) => (idx === i ? e.target.value : v)))}
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
-                onClick={() => removeArrayItem(items, setItems, i)}
+                onClick={() => setItems(items.filter((_, idx) => idx !== i))}
                 className="p-2 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
               >
                 <Trash2 size={14} />
@@ -309,18 +302,21 @@ export default function EditNoticePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Status *</label>
+              <label className="block text-sm font-medium mb-1">Editorial Status</label>
               <select
-                value={form.status}
-                onChange={(e) => setField("status", e.target.value)}
+                value={form.editorialStatus}
+                onChange={(e) => setField("editorialStatus", e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {statusOptions.map((s) => (
+                {editorialStatuses.map((s) => (
                   <option key={s} value={s}>
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Live status (active/expired) is derived from dates automatically
+              </p>
             </div>
           </div>
 
@@ -336,7 +332,7 @@ export default function EditNoticePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Last Date (optional)</label>
+              <label className="block text-sm font-medium mb-1">Last Date (deadline)</label>
               <input
                 type="date"
                 value={form.lastDate}
@@ -359,6 +355,15 @@ export default function EditNoticePage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="block text-sm font-medium mb-1">Official URL</label>
+              <input
+                type="url"
+                value={form.officialUrl}
+                onChange={(e) => setField("officialUrl", e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">PDF URL</label>
               <input
                 type="url"
@@ -367,37 +372,68 @@ export default function EditNoticePage() {
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Source URL</label>
-              <input
-                type="url"
-                value={form.sourceUrl}
-                onChange={(e) => setField("sourceUrl", e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Eligibility</label>
-            <textarea
-              value={form.eligibility}
-              onChange={(e) => setField("eligibility", e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 space-y-5">
-          <h2 className="text-lg font-semibold">Additional Sections</h2>
+          <h2 className="text-lg font-semibold">Key Dates</h2>
+          <p className="text-xs text-gray-400 -mt-3">
+            Structured dates power the deadline engine (status, countdowns, calendar). The Last Date
+            field above is stored as a deadline automatically.
+          </p>
+          <div className="space-y-2">
+            {dates.map((d, i) => (
+              <div key={i} className="flex gap-2 items-center">
+                <select
+                  value={d.kind}
+                  onChange={(e) => updateDate(i, "kind", e.target.value)}
+                  className="px-2 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {dateKinds.map((k) => (
+                    <option key={k} value={k}>
+                      {k === "deadline" ? "Deadline" : "Important Date"}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Label (e.g. Merit List)"
+                  value={d.label}
+                  onChange={(e) => updateDate(i, "label", e.target.value)}
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="date"
+                  value={d.date}
+                  onChange={(e) => updateDate(i, "date", e.target.value)}
+                  className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setDates(dates.filter((_, idx) => idx !== i))}
+                  className="p-2 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {dates.length === 0 && (
+              <p className="text-xs text-gray-400">No additional dates added</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setDates([...dates, { kind: "important_date", label: "", date: "" }])}
+            className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <Plus size={12} />
+            Add Date
+          </button>
+        </div>
 
-          <ArrayField label="Highlights" items={highlights} setItems={setHighlights} />
-          <ArrayField label="Courses Affected" items={coursesAffected} setItems={setCoursesAffected} />
-          <ArrayField label="Branches Affected" items={branchesAffected} setItems={setBranchesAffected} />
-          <ArrayField label="Deadlines" items={deadlines} setItems={setDeadlines} />
+        <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 space-y-5">
+          <h2 className="text-lg font-semibold">Documents Required</h2>
           <ArrayField label="Documents Required" items={documentsRequired} setItems={setDocumentsRequired} />
-          <ArrayField label="Important Dates" items={importantDates} setItems={setImportantDates} />
         </div>
 
         <div className="flex gap-3">

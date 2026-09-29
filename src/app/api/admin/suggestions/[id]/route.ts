@@ -40,7 +40,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           location: suggestion.location || "Unknown",
           district: suggestion.district || "Unknown",
           website: suggestion.website || undefined,
-          courses: [],
         },
       });
     }

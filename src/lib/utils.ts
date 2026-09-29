@@ -19,13 +19,9 @@ export function getCollegeWebsite(id: string): string {
 }
 
 export function getNoticeSourceUrl(notice: { collegeId: string; sourceUrl?: string }): string {
-  return getCollegeWebsite(notice.collegeId) || notice.sourceUrl || "#";
-}
-
-export function getNoticePdfUrl(notice: { collegeId: string; pdfUrl?: string }): string {
-  const college = getCollege(notice.collegeId);
-  if (college?.admissionPortal) return college.admissionPortal;
-  return college?.website ?? "#";
+  // The notice's own official URL is authoritative; fall back to the college
+  // website only when the notice carries none.
+  return notice.sourceUrl || getCollegeWebsite(notice.collegeId) || "#";
 }
 
 export function formatDate(dateStr: string): string {

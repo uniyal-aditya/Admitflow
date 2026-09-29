@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Download, ExternalLink, Calendar, Clock,
   FileText, CheckCircle, AlertTriangle, Info, BookOpen,
-  Users, DollarSign, GraduationCap, Sparkles, ChevronRight,
+  Users, DollarSign, GraduationCap, ChevronRight,
 } from "lucide-react";
 import { notices } from "@/data/notices";
 import { colleges } from "@/data/colleges";
@@ -13,7 +13,7 @@ import { NoticeCard } from "@/components/NoticeCard";
 import {
   noticeTypeColor, noticeTypeLabel, formatDate, getCollegeName,
   getCollegeShortName, daysUntil, isDatePassed, getCollege, getComputedStatus,
-  getNoticeSourceUrl, getNoticePdfUrl,
+  getNoticeSourceUrl,
 } from "@/lib/utils";
 import { addDownload } from "@/lib/store";
 
@@ -71,7 +71,6 @@ export default function NoticeDetailPage() {
       "",
       "Documents Required:",
       ...notice.documentsRequired.map((d) => `  - ${d}`),
-      notice.aiSummary ? `\nAI Summary:\n${notice.aiSummary}` : "",
       `\nSource: ${notice.sourceUrl}`,
     ]
       .filter(Boolean)
@@ -184,18 +183,6 @@ export default function NoticeDetailPage() {
           </a>
         </div>
       </div>
-
-      {notice.aiSummary && (
-        <div className="rounded-2xl border bg-gradient-to-br from-indigo-50 to-purple-50 p-6 dark:from-indigo-950/30 dark:to-purple-950/30 dark:border-indigo-900/50">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            <h2 className="font-semibold">AI Summary</h2>
-          </div>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            {notice.aiSummary}
-          </p>
-        </div>
-      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">

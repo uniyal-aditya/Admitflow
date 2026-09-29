@@ -117,7 +117,6 @@ model College {
   location        String
   district        String
   website         String?
-  admissionPortal String?  // legacy pattern-generated field; deprecated — will be removed in Phase 5 (admin rebuild)
   contactPhone    String?
   contactEmail    String?
   description     String?
@@ -126,7 +125,6 @@ model College {
   affiliation     String?
   principal       String?
   imageUrl        String?
-  courses         Json     @default("[]") // legacy JSON blob; superseded by CourseOffering — removed in Phase 5
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -136,41 +134,10 @@ model College {
   deadlines      Deadline[]
   facilities     CampusFacility[]
   timelineStages LegacyTimelineStage[]
-  admissionNotices AdmissionNotice[]
 
   @@index([district])
   @@index([type])
   @@index([ownership])
-}
-
-model Notice {
-  id               String   @id
-  collegeId        String
-  title            String
-  type             String   // "admission" | "registration" | etc (legacy)
-  publishedDate    String
-  lastDate         String?
-  status           String   // "active" | "upcoming" | "expired" (legacy hardcoded status; derived status lives in Deadline/computeAdmissionStatus from Phase 4)
-  summary          String?
-  highlights       Json     @default("[]")
-  pdfUrl           String?
-  sourceUrl        String?
-  coursesAffected  Json     @default("[]")
-  branchesAffected Json     @default("[]")
-  deadlines        Json     @default("[]")
-  documentsRequired Json    @default("[]")
-  eligibility      String?
-  importantDates   Json     @default("[]")
-  aiSummary        String?
-  relatedNoticeIds Json     @default("[]")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-
-  @@index([collegeId])
-  @@index([type])
-  @@index([status])
 }
 
 model Post {
@@ -275,11 +242,11 @@ model Suggestion {
 
 // ═══════════════════════════════════════════════════════════════════════
 // Normalized admission domain (Phase 1 — ADDITIVE).
-// Legacy College/Notice models above are untouched so existing admin CRUD
-// keeps working. Every fact below points to a Source via Attribution.
+// Every fact points to a Source via Attribution.
 // Nothing is invented; unknown provenance = unverified.
-// Naming note: `AdmissionNotice` is the canonical notice table; the legacy
-// `Notice` table above is removed and this is renamed in Phase 5.
+// Naming note (Phase 5): `Notice` below IS the canonical notice table —
+// the legacy AI-era Notice model was dropped and this was renamed from
+// AdmissionNotice in the Phase 5 migration.
 // ═══════════════════════════════════════════════════════════════════════
 
 enum CollegeTypeEnum {
@@ -417,7 +384,7 @@ model AcademicSession {
   offerings CourseOffering[]
   fees      FeeStructure[]
   routes    AdmissionRoute[]
-  admissionNotices AdmissionNotice[]
+  notices   Notice[]
   deadlines Deadline[]
 }
 
@@ -515,7 +482,7 @@ model CounsellingAuthority {
 
   routes           AdmissionRoute[]
   deadlines        Deadline[]
-  admissionNotices AdmissionNotice[]
+  notices          Notice[]
 }
 
 model AdmissionRoute {
@@ -561,7 +528,7 @@ model Deadline {
   @@index([authorityId])
 }
 
-model AdmissionNotice {
+model Notice {
   id                String          @id
   collegeId         String?
   authorityId       String?
@@ -580,21 +547,21 @@ model AdmissionNotice {
   college   College?              @relation(fields: [collegeId], references: [id], onDelete: SetNull)
   authority CounsellingAuthority? @relation(fields: [authorityId], references: [id])
   session   AcademicSession       @relation(fields: [sessionId], references: [year])
-  dates     AdmissionNoticeDate[]
+  dates     NoticeDate[]
 
   @@index([publishedAt])
   @@index([type])
   @@index([collegeId])
 }
 
-model AdmissionNoticeDate {
+model NoticeDate {
   id       String   @id @default(cuid())
   noticeId String
   kind     String
   label    String
   date     DateTime
 
-  notice AdmissionNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
 
   @@index([noticeId])
   @@index([date])

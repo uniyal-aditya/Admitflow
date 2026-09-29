@@ -1,97 +1,7 @@
 import { NextResponse } from "next/server";
+import { NoticeTypeEnum } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db/prisma";
-import fs from "fs";
-import path from "path";
-
-function patchStaticFile(category: string, id: string, field: string, value: string): boolean {
-  const filename = category === "college" ? "colleges.ts" : "notices.ts";
-  const filePath = path.join(process.cwd(), "src", "data", filename);
-  if (!fs.existsSync(filePath)) return false;
-
-  let content = fs.readFileSync(filePath, "utf-8");
-
-  const objStartMarker = `id: "${id}"`;
-  const objStartIdx = content.indexOf(objStartMarker);
-  if (objStartIdx === -1) return false;
-
-  const objEndIdx = content.indexOf("};", objStartIdx);
-  if (objEndIdx === -1) return false;
-
-  const objBlock = content.slice(objStartIdx, objEndIdx + 2);
-
-  const fieldRegex = new RegExp(`(${field}:\\s*)(["']?)[^"',\n]+(["']?)(,?)`);
-  const match = objBlock.match(fieldRegex);
-  if (!match) return false;
-
-  const fullMatch = match[0];
-  const prefix = match[1];
-  const trailing = match[4] || "";
-
-  const needsQuotes = field !== "established" && isNaN(Number(value));
-  const newValue = needsQuotes
-    ? `${prefix}"${value.replace(/"/g, '\\"')}"${trailing}`
-    : `${prefix}${value}${trailing}`;
-
-  const absStart = content.indexOf(fullMatch, objStartIdx);
-  if (absStart === -1) return false;
-
-  content = content.slice(0, absStart) + newValue + content.slice(absStart + fullMatch.length);
-  fs.writeFileSync(filePath, content, "utf-8");
-  return true;
-}
-
-function patchStaticFileBatch(
-  fixes: { category: string; id: string; field: string; suggestedFix: string }[]
-): number {
-  const byFile: Record<string, typeof fixes> = {};
-  for (const f of fixes) {
-    const file = f.category === "college" ? "colleges.ts" : "notices.ts";
-    (byFile[file] ??= []).push(f);
-  }
-
-  let patched = 0;
-  for (const [filename, fileFixes] of Object.entries(byFile)) {
-    const filePath = path.join(process.cwd(), "src", "data", filename);
-    if (!fs.existsSync(filePath)) continue;
-
-    let content = fs.readFileSync(filePath, "utf-8");
-    let modified = false;
-
-    for (const fix of fileFixes) {
-      const { id, field, suggestedFix: value } = fix;
-      const objStartIdx = content.indexOf(`id: "${id}"`);
-      if (objStartIdx === -1) continue;
-
-      const objEndIdx = content.indexOf("};", objStartIdx);
-      if (objEndIdx === -1) continue;
-
-      const objBlock = content.slice(objStartIdx, objEndIdx + 2);
-      const fieldRegex = new RegExp(`(${field}:\\s*)(["']?)[^"',\n]+(["']?)(,?)`);
-      const match = objBlock.match(fieldRegex);
-      if (!match) continue;
-
-      const fullMatch = match[0];
-      const prefix = match[1];
-      const trailing = match[4] || "";
-      const needsQuotes = field !== "established" && isNaN(Number(value));
-      const newValue = needsQuotes
-        ? `${prefix}"${value.replace(/"/g, '\\"')}"${trailing}`
-        : `${prefix}${value}${trailing}`;
-
-      const absStart = content.indexOf(fullMatch, objStartIdx);
-      if (absStart === -1) continue;
-
-      content = content.slice(0, absStart) + newValue + content.slice(absStart + fullMatch.length);
-      modified = true;
-      patched++;
-    }
-
-    if (modified) fs.writeFileSync(filePath, content, "utf-8");
-  }
-
-  return patched;
-}
 
 async function applySingleFix(admin: { email: string }, fix: { id: string; field: string; suggestedFix: string; category: string; item?: string }) {
   const { id, field, suggestedFix: value, category, item } = fix;
@@ -107,19 +17,37 @@ async function applySingleFix(admin: { email: string }, fix: { id: string; field
 
     await prisma.college.update({ where: { id }, data: updateData });
   } else if (category === "notice") {
+    // Canonical Notice model: dates are structured (publishedAt + NoticeDate
+    // rows) and live status is derived, never stored.
     const existing = await prisma.notice.findUnique({ where: { id } });
     if (!existing) return { error: "Notice not found" };
 
-    const updateData: any = {};
-    if (["title", "type", "status", "publishedDate", "lastDate", "summary"].includes(field)) updateData[field] = value;
-    else return { error: `Unsupported notice field: ${field}` };
-
-    await prisma.notice.update({ where: { id }, data: updateData });
+    if (field === "title" || field === "summary") {
+      await prisma.notice.update({ where: { id }, data: { [field]: value } });
+    } else if (field === "type") {
+      await prisma.notice.update({ where: { id }, data: { type: value as NoticeTypeEnum } });
+    } else if (field === "publishedDate") {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return { error: `Invalid date for publishedDate: ${value}` };
+      await prisma.notice.update({ where: { id }, data: { publishedAt: d } });
+    } else if (field === "lastDate") {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return { error: `Invalid date for lastDate: ${value}` };
+      await prisma.noticeDate.deleteMany({ where: { noticeId: id, kind: "deadline", label: "Last Date" } });
+      await prisma.noticeDate.create({
+        data: { noticeId: id, kind: "deadline", label: "Last Date", date: d },
+      });
+    } else if (field === "status") {
+      return {
+        error:
+          "Notice status is derived from dates (deadline engine) and cannot be set; adjust publishedDate/lastDate instead",
+      };
+    } else {
+      return { error: `Unsupported notice field: ${field}` };
+    }
   } else {
     return { error: `Unsupported category: ${category}` };
   }
-
-  patchStaticFile(category, id, field, value);
 
   await prisma.adminLog.create({
     data: {
@@ -140,7 +68,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     if (Array.isArray(body)) {
-      // Batch: apply DB fixes sequentially, then patch static files in one pass per file
+      // Batch: apply DB fixes sequentially.
       const errors: { issue: string; error: string }[] = [];
       let applied = 0;
 
@@ -153,10 +81,6 @@ export async function POST(req: Request) {
           errors.push({ issue: fix.item || fix.id, error: e.message || "Unknown" });
         }
       }
-
-      // Rewrite static files in batch (one read/write per file) to avoid race conditions
-      const filePatches = body.filter((f: any) => !errors.some((e) => e.issue === (f.item || f.id)));
-      if (filePatches.length > 0) patchStaticFileBatch(filePatches);
 
       return NextResponse.json({ success: applied > 0, applied, errors });
     }

@@ -2,20 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 const collegeTypes = ["university", "engineering", "polytechnic", "degree", "diploma", "medical", "management", "pharmacy", "law", "other"]
 const ownershipTypes = ["government", "private", "aided", "deemed", "autonomous"]
-
-interface Course {
-  name: string
-  duration: string
-  seats: number
-  fees: number
-  eligibility: string
-  branches: string | string[]
-}
 
 export default function EditCollegePage() {
   const router = useRouter()
@@ -33,7 +24,6 @@ export default function EditCollegePage() {
     location: "",
     district: "",
     website: "",
-    admissionPortal: "",
     contactPhone: "",
     contactEmail: "",
     description: "",
@@ -42,7 +32,6 @@ export default function EditCollegePage() {
     affiliation: "",
     principal: "",
   })
-  const [courses, setCourses] = useState<Course[]>([])
 
   useEffect(() => {
     fetchCollege()
@@ -66,7 +55,6 @@ export default function EditCollegePage() {
         location: college.location || "",
         district: college.district || "",
         website: college.website || "",
-        admissionPortal: college.admissionPortal || "",
         contactPhone: college.contactPhone || "",
         contactEmail: college.contactEmail || "",
         description: college.description || "",
@@ -75,16 +63,6 @@ export default function EditCollegePage() {
         affiliation: college.affiliation || "",
         principal: college.principal || "",
       })
-      setCourses(
-        (college.courses || []).map((c: any) => ({
-          name: c.name || "",
-          duration: c.duration || "",
-          seats: c.seats || 0,
-          fees: c.fees || 0,
-          eligibility: c.eligibility || "",
-          branches: Array.isArray(c.branches) ? c.branches.join(", ") : (c.branches || ""),
-        }))
-      )
     } catch {
       setMessage({ type: "error", text: "Failed to load college" })
     } finally {
@@ -96,40 +74,16 @@ export default function EditCollegePage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  function addCourse() {
-    setCourses((prev) => [
-      ...prev,
-      { name: "", duration: "", seats: 0, fees: 0, eligibility: "", branches: "" },
-    ])
-  }
-
-  function removeCourse(index: number) {
-    setCourses((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function setCourse(index: number, key: keyof Course, value: string | number) {
-    setCourses((prev) => prev.map((c, i) => (i === index ? { ...c, [key]: value } : c)))
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setMessage(null)
 
-    const processedCourses = courses.map((c) => ({
-      ...c,
-      seats: Number(c.seats),
-      fees: Number(c.fees),
-      branches: typeof c.branches === "string"
-        ? c.branches.split(",").map((b) => b.trim()).filter(Boolean)
-        : c.branches,
-    }))
-
     try {
       const res = await fetch(`/api/admin/colleges/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, ...form, courses: processedCourses, established: Number(form.established) }),
+        body: JSON.stringify({ name, ...form, established: Number(form.established) }),
       })
 
       if (res.status === 401) {
@@ -293,15 +247,6 @@ export default function EditCollegePage() {
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Admission Portal</label>
-              <input
-                type="url"
-                value={form.admissionPortal}
-                onChange={(e) => setField("admissionPortal", e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -355,99 +300,6 @@ export default function EditCollegePage() {
               className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Courses</h2>
-            <button
-              type="button"
-              onClick={addCourse}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Plus size={14} />
-              Add Course
-            </button>
-          </div>
-
-          {courses.length === 0 && (
-            <p className="text-sm text-gray-500">No courses added yet.</p>
-          )}
-
-          {courses.map((course, i) => (
-            <div key={i} className="border rounded-lg p-4 space-y-3 relative">
-              <button
-                type="button"
-                onClick={() => removeCourse(i)}
-                className="absolute top-3 right-3 p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
-              >
-                <Trash2 size={14} />
-              </button>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Course Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={course.name}
-                    onChange={(e) => setCourse(i, "name", e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Duration</label>
-                  <input
-                    type="text"
-                    value={course.duration}
-                    onChange={(e) => setCourse(i, "duration", e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Seats</label>
-                  <input
-                    type="number"
-                    value={course.seats || ""}
-                    onChange={(e) => setCourse(i, "seats", Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Fees (₹)</label>
-                  <input
-                    type="number"
-                    value={course.fees || ""}
-                    onChange={(e) => setCourse(i, "fees", Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Eligibility</label>
-                <input
-                  type="text"
-                  value={course.eligibility}
-                  onChange={(e) => setCourse(i, "eligibility", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Branches (comma-separated)</label>
-                <input
-                  type="text"
-                  value={typeof course.branches === "string" ? course.branches : course.branches.join(", ")}
-                  onChange={(e) => setCourse(i, "branches", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          ))}
         </div>
 
         <div className="flex gap-3">

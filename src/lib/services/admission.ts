@@ -78,10 +78,6 @@ export function collegeRowToViewModel(
     location: row.location,
     district: row.district,
     website: row.website ?? "",
-    // Pattern-generated admission portals were dropped in Phase 1 (never
-    // invented); the view model keeps the field so legacy UI compiles, but it
-    // stays empty until an admin verifies a real portal URL.
-    admissionPortal: "",
     contact: row.contactPhone || row.contactEmail
       ? { phone: row.contactPhone ?? "", email: row.contactEmail ?? "" }
       : undefined,
@@ -192,7 +188,7 @@ export const noticeInclude = {
 } as const;
 
 export async function getNotices(): Promise<Notice[]> {
-  const rows = await prisma.admissionNotice.findMany({
+  const rows = await prisma.notice.findMany({
     orderBy: { publishedAt: "desc" },
     include: noticeInclude,
   });
@@ -200,7 +196,7 @@ export async function getNotices(): Promise<Notice[]> {
 }
 
 export async function getNoticesByCollege(collegeId: string): Promise<Notice[]> {
-  const rows = await prisma.admissionNotice.findMany({
+  const rows = await prisma.notice.findMany({
     where: { collegeId },
     orderBy: { publishedAt: "desc" },
     include: noticeInclude,
@@ -209,7 +205,7 @@ export async function getNoticesByCollege(collegeId: string): Promise<Notice[]> 
 }
 
 export async function getNoticeById(id: string): Promise<Notice | null> {
-  const row = await prisma.admissionNotice.findUnique({
+  const row = await prisma.notice.findUnique({
     where: { id },
     include: noticeInclude,
   });

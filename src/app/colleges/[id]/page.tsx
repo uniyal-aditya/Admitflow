@@ -109,17 +109,6 @@ export default async function CollegeDetailPage({
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
-            {college.admissionPortal && (
-              <a
-                href={college.admissionPortal}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
-              >
-                <BookOpen className="h-4 w-4" />
-                Admission Portal
-              </a>
-            )}
           </div>
 
           {college.contact && (

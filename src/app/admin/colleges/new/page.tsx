@@ -2,20 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 const collegeTypes = ["university", "engineering", "polytechnic", "degree", "diploma", "medical", "management", "pharmacy", "law", "other"]
 const ownershipTypes = ["government", "private", "aided", "deemed", "autonomous"]
-
-interface Course {
-  name: string
-  duration: string
-  seats: number
-  fees: number
-  eligibility: string
-  branches: string
-}
 
 function slugify(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
@@ -34,7 +25,6 @@ export default function NewCollegePage() {
     location: "",
     district: "",
     website: "",
-    admissionPortal: "",
     contactPhone: "",
     contactEmail: "",
     description: "",
@@ -44,25 +34,8 @@ export default function NewCollegePage() {
     principal: "",
   })
 
-  const [courses, setCourses] = useState<Course[]>([])
-
   function setField(key: string, value: string | number) {
     setForm((prev) => ({ ...prev, [key]: value }))
-  }
-
-  function addCourse() {
-    setCourses((prev) => [
-      ...prev,
-      { name: "", duration: "", seats: 0, fees: 0, eligibility: "", branches: "" },
-    ])
-  }
-
-  function removeCourse(index: number) {
-    setCourses((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function setCourse(index: number, key: keyof Course, value: string | number) {
-    setCourses((prev) => prev.map((c, i) => (i === index ? { ...c, [key]: value } : c)))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -70,21 +43,10 @@ export default function NewCollegePage() {
     setSubmitting(true)
     setMessage(null)
 
-    const processedCourses = courses.map((c) => ({
-      ...c,
-      seats: Number(c.seats),
-      fees: Number(c.fees),
-      branches: c.branches
-        .split(",")
-        .map((b) => b.trim())
-        .filter(Boolean),
-    }))
-
     try {
       const res = await fetch("/api/admin/colleges", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: slugify(name), name, ...form, courses: processedCourses, established: Number(form.established) }),
+        body: JSON.stringify({ id: slugify(name), name, ...form, established: Number(form.established) }),
       })
 
       if (res.status === 401) {
@@ -243,15 +205,6 @@ export default function NewCollegePage() {
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Admission Portal</label>
-              <input
-                type="url"
-                value={form.admissionPortal}
-                onChange={(e) => setField("admissionPortal", e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -305,101 +258,6 @@ export default function NewCollegePage() {
               className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 rounded-lg border p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Courses</h2>
-            <button
-              type="button"
-              onClick={addCourse}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Plus size={14} />
-              Add Course
-            </button>
-          </div>
-
-          {courses.length === 0 && (
-            <p className="text-sm text-gray-500">No courses added yet.</p>
-          )}
-
-          {courses.map((course, i) => (
-            <div key={i} className="border rounded-lg p-4 space-y-3 relative">
-              <button
-                type="button"
-                onClick={() => removeCourse(i)}
-                className="absolute top-3 right-3 p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
-              >
-                <Trash2 size={14} />
-              </button>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Course Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={course.name}
-                    onChange={(e) => setCourse(i, "name", e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Duration</label>
-                  <input
-                    type="text"
-                    value={course.duration}
-                    onChange={(e) => setCourse(i, "duration", e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. 4 years"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Seats</label>
-                  <input
-                    type="number"
-                    value={course.seats || ""}
-                    onChange={(e) => setCourse(i, "seats", Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Fees (₹)</label>
-                  <input
-                    type="number"
-                    value={course.fees || ""}
-                    onChange={(e) => setCourse(i, "fees", Number(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Eligibility</label>
-                <input
-                  type="text"
-                  value={course.eligibility}
-                  onChange={(e) => setCourse(i, "eligibility", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Branches (comma-separated)</label>
-                <input
-                  type="text"
-                  value={course.branches}
-                  onChange={(e) => setCourse(i, "branches", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. CSE, ECE, ME"
-                />
-              </div>
-            </div>
-          ))}
         </div>
 
         <div className="flex gap-3">

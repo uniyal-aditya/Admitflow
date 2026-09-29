@@ -13,7 +13,8 @@ export interface College {
   location: string;
   district: string;
   website: string;
-  admissionPortal: string;
+  /** Legacy static-data field (pattern-generated); the canonical domain has no admission portal. */
+  admissionPortal?: string;
   contact?: { phone: string; email: string };
   courses: Course[];
   imageUrl?: string;
@@ -52,6 +53,7 @@ export interface Notice {
   documentsRequired: string[];
   eligibility: string;
   importantDates: { label: string; date: string }[];
+  /** Legacy static-data field; AI-generated content was removed in Phase 5 — never populated by the canonical pipeline. */
   aiSummary?: string;
   relatedNoticeIds: string[];
 }

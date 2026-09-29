@@ -27,7 +27,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: id, name, shortName, type, ownership, location, district" }, { status: 400 });
     }
 
-    const college = await prisma.college.create({ data: body });
+    // Allowlist only real College columns (admissionPortal/courses were
+    // dropped in Phase 5; blind spreads now fail schema validation).
+    const college = await prisma.college.create({
+      data: {
+        id,
+        name,
+        shortName,
+        type,
+        ownership,
+        location,
+        district,
+        website: body.website || null,
+        contactPhone: body.contactPhone || null,
+        contactEmail: body.contactEmail || null,
+        description: body.description || null,
+        established:
+          body.established !== undefined && body.established !== null && body.established !== ""
+            ? parseInt(body.established, 10) || null
+            : null,
+        accreditation: body.accreditation || null,
+        affiliation: body.affiliation || null,
+        principal: body.principal || null,
+        imageUrl: body.imageUrl || null,
+      },
+    });
     return NextResponse.json(college, { status: 201 });
   } catch (error) {
     console.error("Error creating college:", error);

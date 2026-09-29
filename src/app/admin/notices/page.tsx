@@ -12,7 +12,7 @@ interface Notice {
   college?: { shortName?: string }
   type: string
   status: string
-  publishedDate: string
+  publishedAt: string | null
 }
 
 export default function NoticesPage() {
@@ -141,7 +141,7 @@ export default function NoticesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {notice.publishedDate ? new Date(notice.publishedDate).toLocaleDateString() : "-"}
+                    {notice.publishedAt ? new Date(notice.publishedAt).toLocaleDateString() : "-"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
