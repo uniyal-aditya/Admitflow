@@ -46,7 +46,7 @@ function offeringsToCourses(
   }));
 }
 
-function collegeRowToViewModel(
+export function collegeRowToViewModel(
   row: {
     id: string;
     name: string;
@@ -94,7 +94,7 @@ function collegeRowToViewModel(
   };
 }
 
-const collegeInclude = {
+export const collegeInclude = {
   offerings: {
     include: {
       program: { select: { name: true } },
@@ -143,7 +143,7 @@ function isoDate(d: Date | null): string {
  * - `status` is left empty: it is time-derived in the UI (getComputedStatus)
  *   and Phase 4 replaces it with the deadline engine.
  */
-function noticeRowToViewModel(row: {
+export function noticeRowToViewModel(row: {
   id: string;
   collegeId: string | null;
   title: string;
@@ -187,7 +187,7 @@ function noticeRowToViewModel(row: {
   };
 }
 
-const noticeInclude = {
+export const noticeInclude = {
   dates: { select: { kind: true, label: true, date: true }, orderBy: { date: "asc" as const } },
 } as const;
 
