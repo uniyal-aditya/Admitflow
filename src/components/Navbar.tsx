@@ -23,6 +23,7 @@ import {
 import { useTheme } from "next-themes";
 import { getUnreadCount } from "@/lib/store";
 import { useInstallApp } from "@/hooks/useInstallApp";
+import { InstallGuide } from "@/components/InstallGuide";
 import { useAuth } from "@/components/AuthProvider";
 
 const navLinks = [
@@ -39,7 +40,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
-  const { install } = useInstallApp();
+  const { install, isStandalone, platform, guideOpen, closeGuide } = useInstallApp();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const { user, loading, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -121,13 +122,13 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">
-          <button
-            onClick={install}
+          {!isStandalone && <button
+            onClick={() => { void install(); }}
             className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             Download App
-          </button>
+          </button>}
 
           {user && (
             <div className="relative profile-menu">
@@ -252,7 +253,7 @@ export function Navbar() {
                 </Link>
               )}
               <button
-                onClick={() => { install(); setMobileOpen(false); }}
+                onClick={() => { void install(); setMobileOpen(false); }}
                 className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50"
               >
                 <Download className="h-5 w-5" />
@@ -262,6 +263,7 @@ export function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+    <InstallGuide open={guideOpen} platform={platform} onClose={closeGuide} />
     </nav>
   );
 }

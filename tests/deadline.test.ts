@@ -137,3 +137,29 @@ describe("deriveCurrentStage", () => {
     assert.equal(deriveCurrentStage([], "closed"), "closed");
   });
 });
+
+describe("deriveTimelineStages: stale 'current' marker", () => {
+  it("drops a stale current marker when a later stage date has passed", () => {
+    const stages = deriveTimelineStages(
+      [
+        { stage: "registration", label: "R", date: "2026-02-01", status: "completed" },
+        { stage: "merit_list", label: "M", date: "2026-07-20", status: "current" },
+        { stage: "counselling_1", label: "C", date: "2026-08-01", status: "upcoming" },
+      ],
+      new Date("2026-11-17T00:00:00Z"),
+    );
+    assert.deepEqual(stages.map((s) => s.status), ["completed", "completed", "completed"]);
+  });
+
+  it("never yields a completed stage after the current one", () => {
+    const stages = deriveTimelineStages(
+      [
+        { stage: "registration", label: "R", date: PAST, status: "completed" },
+        { stage: "merit_list", label: "M", date: FUTURE, status: "current" },
+        { stage: "counselling_1", label: "C", date: "2027-02-01", status: "upcoming" },
+      ],
+      NOW,
+    );
+    assert.deepEqual(stages.map((s) => s.status), ["completed", "current", "upcoming"]);
+  });
+});

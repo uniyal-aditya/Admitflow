@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth";
+import { createAdmin2faToken, ADMIN_2FA_COOKIE } from "@/lib/admin-2fa";
 import { TOTP, NobleCryptoPlugin, ScureBase32Plugin } from "otplib";
 
 const totp = new TOTP({ crypto: new NobleCryptoPlugin(), base32: new ScureBase32Plugin() });
@@ -28,12 +29,12 @@ export async function POST(req: NextRequest) {
     }
 
     const res = NextResponse.json({ success: true });
-    res.cookies.set("admin_2fa", "verified", {
+    res.cookies.set(ADMIN_2FA_COOKIE, await createAdmin2faToken(session.email), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24,
-      path: "/admin",
+      maxAge: 60 * 60 * 12,
+      path: "/",
     });
     return res;
   } catch {

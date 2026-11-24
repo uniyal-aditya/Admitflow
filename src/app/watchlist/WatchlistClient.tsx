@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Star, Heart, Bell, ArrowRight, BookOpen } from "lucide-react";
+import { Star, Bell, ArrowRight, MapPin } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { NoticeCard } from "@/components/NoticeCard";
+import { PageHeading } from "@/components/gov/PageHeading";
+import { useCollegeLookup } from "@/hooks/useCollegeLookup";
 import { getNotifications, markAllNotificationsRead } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 import { Notice } from "@/types";
@@ -97,145 +99,107 @@ export function WatchlistClient({
 
   if (!mounted || !ready) return null;
 
+  const h2 = "mb-3 inline-block border-b-2 border-saffron-500 pb-1 text-xl font-bold text-indigo-900 dark:text-white";
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Star className="h-6 w-6 text-yellow-500 fill-current" />
-            Your Watchlist
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Your favourite colleges with priority updates
-          </p>
-        </div>
-        {favorites.length > 0 && (
-          <Link
-            href="/colleges"
-            className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
-          >
-            <BookOpen className="h-4 w-4" />
-            Browse Colleges
-          </Link>
-        )}
-      </div>
+    <div>
+      <PageHeading
+        title="Your watchlist"
+        crumbs={[{ label: "Watchlist" }]}
+        description="The colleges you follow, with their open notices and upcoming deadlines."
+        action={favorites.length > 0 ? (
+          <Link href="/colleges" className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-900 hover:bg-indigo-50 dark:border-gray-700 dark:bg-gray-900 dark:text-indigo-200 dark:hover:bg-gray-800">Add more colleges</Link>
+        ) : undefined}
+      />
 
       {favorites.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <Heart className="h-16 w-16 mb-4" />
-          <p className="text-xl font-medium">Your watchlist is empty</p>
-          <p className="text-sm mt-2">Add colleges to your watchlist to get priority updates</p>
-          <Link
-            href="/colleges"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-          >
-            Browse Colleges
-            <ArrowRight className="h-4 w-4" />
+        <div className="rounded-md border border-dashed border-gray-300 bg-white py-14 text-center dark:border-gray-700 dark:bg-gray-900">
+          <Star className="mx-auto mb-3 h-10 w-10 text-gray-400" />
+          <p className="font-serif text-xl font-semibold">Your watchlist is empty</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-gray-700 dark:text-gray-300">Select the star on a college to follow it. Its notices and deadlines will be collected on this page.</p>
+          <Link href="/colleges" className="mt-5 inline-flex items-center gap-2 rounded-md bg-indigo-800 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-900">
+            Browse colleges <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       ) : (
-        <>
+        <div className="space-y-8">
           <FavoriteCollegeGrid favorites={favorites} />
 
           {favDeadlines.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Bell className="h-5 w-5 text-orange-500" />
-                Upcoming Deadlines from Watchlist
-              </h2>
-              <div className="grid md:grid-cols-2 gap-3">
-                {favDeadlines.map((n) => (
-                  <NoticeCard key={n.id} notice={n} collegeNames={collegeNames} />
-                ))}
+            <section>
+              <h2 className={h2}>Upcoming deadlines</h2>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {favDeadlines.map((n) => <NoticeCard key={n.id} notice={n} collegeNames={collegeNames} />)}
               </div>
-            </div>
+            </section>
           )}
 
           {favNotices.length > favDeadlines.length && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Notices from Watchlist</h2>
-              <div className="grid md:grid-cols-2 gap-3">
-                {favNotices.slice(0, 6).map((n) => (
-                  <NoticeCard key={n.id} notice={n} collegeNames={collegeNames} />
-                ))}
+            <section>
+              <h2 className={h2}>Notices from your colleges</h2>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {favNotices.slice(0, 6).map((n) => <NoticeCard key={n.id} notice={n} collegeNames={collegeNames} />)}
               </div>
-            </div>
+            </section>
+          )}
+
+          {favNotices.length === 0 && (
+            <p className="rounded-md border border-gray-200 bg-white p-4 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
+              No open notices from these colleges right now. Check each college&apos;s official website for the latest news.
+            </p>
           )}
 
           {notifications.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Notification History</h2>
-                <button
-                  onClick={() => void handleMarkAllRead()}
-                  className="text-sm text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Mark all as read
-                </button>
+            <section>
+              <div className="flex items-end justify-between">
+                <h2 className={h2}>Notification history</h2>
+                <button onClick={() => void handleMarkAllRead()} className="mb-3 text-sm font-semibold text-indigo-800 underline dark:text-indigo-200">Mark all as read</button>
               </div>
-              <div className="space-y-2">
+              <ul className="space-y-2">
                 {notifications.slice(0, 10).map((n) => (
-                  <div
-                    key={n.id}
-                    className={`flex items-start gap-3 rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800 ${
-                      !n.read ? "border-l-4 border-l-indigo-500" : ""
-                    }`}
-                  >
-                    <Bell className="h-5 w-5 shrink-0 text-indigo-500 mt-0.5" />
+                  <li key={n.id} className={`flex items-start gap-3 rounded-md border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 ${!n.read ? "border-l-4 border-l-saffron-500" : ""}`}>
+                    <Bell className="mt-0.5 h-5 w-5 shrink-0 text-saffron-600" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">{n.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{n.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{n.collegeName} &middot; {formatDate(n.createdAt)}</p>
+                      <p className="text-sm font-semibold text-indigo-900 dark:text-white">{n.title}</p>
+                      <p className="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{n.message}</p>
+                      <p className="mt-1 text-xs text-gray-700 dark:text-gray-300">{n.collegeName} &middot; {formatDate(n.createdAt)}</p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </ul>
+            </section>
           )}
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-/** Favorite college cards; names resolve from the shared static dataset client-side. */
+/** Followed colleges. Details come from the database (not the static seed file). */
 function FavoriteCollegeGrid({ favorites }: { favorites: string[] }) {
-  const [colleges, setColleges] = useState<{ id: string; shortName: string; location: string; website: string; type: string; ownership: string; coursesCount: number }[]>([]);
-
-  useEffect(() => {
-    import("@/data/colleges").then(({ colleges }) => {
-      setColleges(
-        favorites
-          .map((id) => colleges.find((c) => c.id === id))
-          .filter(Boolean)
-          .map((c) => ({
-            id: c!.id,
-            shortName: c!.shortName,
-            location: c!.location,
-            website: c!.website,
-            type: c!.type,
-            ownership: c!.ownership,
-            coursesCount: c!.courses.length,
-          }))
-      );
-    });
-  }, [favorites]);
-
-  if (colleges.length === 0) return null;
+  const { colleges, loaded } = useCollegeLookup();
+  if (!loaded) return null;
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {colleges.map((c) => (
-        <a
-          key={c.id}
-          href={`/colleges/${c.id}`}
-          className="rounded-xl border bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900 dark:border-gray-800"
-        >
-          <p className="font-semibold">{c.shortName}</p>
-          <p className="text-xs text-gray-400 mt-1">{c.location}</p>
-          <p className="text-xs text-gray-400 mt-2">{c.coursesCount} courses</p>
-        </a>
-      ))}
-    </div>
+    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {favorites.map((id) => {
+        const c = colleges[id];
+        return (
+          <li key={id}>
+            <Link href={`/colleges/${id}`} className="block h-full rounded-md border border-gray-200 border-t-4 border-t-indigo-800 bg-white p-4 hover:shadow-md dark:border-gray-800 dark:border-t-indigo-500 dark:bg-gray-900">
+              <p className="font-serif text-lg font-semibold leading-snug text-indigo-900 dark:text-white">{c?.shortName ?? id}</p>
+              {c ? (
+                <>
+                  <p className="mt-1 flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"><MapPin className="h-3.5 w-3.5" />{c.location}</p>
+                  <p className="mt-2 text-xs text-gray-700 dark:text-gray-300">{c.coursesCount} courses listed</p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">This college is no longer listed.</p>
+              )}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

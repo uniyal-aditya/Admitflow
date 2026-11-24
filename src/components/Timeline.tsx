@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle, Circle, Loader, Clock,
-  FileText, CalendarCheck, Users, ListOrdered,
-  UserCheck, MapPin, AlertTriangle, ChevronDown,
+  CheckCircle, Circle, Loader, FileText, CalendarCheck, Users,
+  ListOrdered, MapPin, AlertTriangle, ChevronDown, Info,
 } from "lucide-react";
-import { TimelineData, TimelineStage } from "@/types";
+import { TimelineData } from "@/types";
 import { timelineLabels } from "@/lib/utils";
 
 const stageIcons: Record<string, React.ElementType> = {
@@ -21,43 +20,63 @@ const stageIcons: Record<string, React.ElementType> = {
   closed: CheckCircle,
 };
 
-function StageIcon({ stage, status, isCurrent }: { stage: string; status: string; isCurrent: boolean }) {
+function StageIcon({ stage, status }: { stage: string; status: string }) {
   const Icon = stageIcons[stage] || Circle;
   if (status === "completed") {
     return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
       </div>
     );
   }
-  if (isCurrent) {
+  if (status === "current") {
     return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900">
-        <Loader className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 ring-2 ring-indigo-500 ring-offset-2 dark:bg-indigo-900/30 dark:ring-offset-gray-900">
+        <Loader className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
       </div>
     );
   }
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-      <Icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+      <Icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
     </div>
   );
 }
 
-export function Timeline({ data }: { data: TimelineData }) {
-  const [expandedStage, setExpandedStage] = useState<string | null>(null);
+const statusText: Record<string, string> = {
+  completed: "Completed",
+  current: "Ongoing",
+  upcoming: "Upcoming",
+};
 
-  const currentIndex = data.stages.findIndex((s) => s.stage === data.currentStage);
+/**
+ * Admission timeline. Always vertical: it lives in a ~380px side card, where
+ * the old 5-column horizontal layout overlapped labels and overflowed.
+ * Status is taken from each stage's own (derived) status, never inferred from
+ * array position, so a stage can't look "completed" after the current one.
+ */
+export function Timeline({ data }: { data: TimelineData }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const cycleEnded = data.stages.length > 0 && data.stages.every((s) => s.status === "completed");
 
   const hasDateIssues = data.stages.some((s, i) => {
     if (i === 0 || !s.date) return false;
-    const prevDate = data.stages[i - 1]?.date;
-    if (!prevDate) return false;
-    return new Date(s.date) < new Date(prevDate);
+    const prev = data.stages[i - 1]?.date;
+    return prev ? new Date(s.date) < new Date(prev) : false;
   });
 
   return (
-    <div className="relative">
+    <div>
+      {cycleEnded && (
+        <div className="mb-4 flex gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            This admission cycle has ended. Dates for the next session will appear here once the
+            college announces them. Check the official website for the latest information.
+          </span>
+        </div>
+      )}
       {hasDateIssues && (
         <div className="mb-3 flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -65,121 +84,68 @@ export function Timeline({ data }: { data: TimelineData }) {
         </div>
       )}
 
-      {/* Desktop horizontal */}
-      <div className="hidden lg:block">
-        <div className="relative flex justify-between">
-          <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700">
-            <div
-              className="h-full bg-indigo-500 transition-all duration-500"
-              style={{ width: `${data.stages.length > 1 ? (currentIndex / (data.stages.length - 1)) * 100 : 0}%` }}
-            />
-          </div>
-          {data.stages.map((stage, i) => {
-            const isCurrent = stage.stage === data.currentStage;
-            const isExpanded = expandedStage === stage.stage;
-            return (
-              <motion.button
-                key={stage.stage}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
-                onClick={() => setExpandedStage(isExpanded ? null : stage.stage)}
-                className="relative flex flex-col items-center gap-2 pt-1 group"
-              >
-                <StageIcon stage={stage.stage} status={stage.status} isCurrent={isCurrent} />
-                <div className="text-center">
-                  <span className={`block text-xs font-semibold whitespace-nowrap ${
-                    stage.status === "completed" ? "text-green-600 dark:text-green-400" :
-                    isCurrent ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500"
-                  }`}>
+      <ol className="relative space-y-5">
+        <span className="absolute left-[17px] top-2 bottom-2 w-px bg-gray-200 dark:bg-gray-700" aria-hidden />
+        {data.stages.map((stage, i) => {
+          const isOpen = expanded === stage.stage;
+          return (
+            <motion.li
+              key={`${stage.stage}-${i}`}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="relative flex items-start gap-3"
+            >
+              <div className="relative z-10 bg-white dark:bg-gray-900">
+                <StageIcon stage={stage.stage} status={stage.status} />
+              </div>
+              <div className="min-w-0 flex-1 pt-0.5">
+                <button
+                  type="button"
+                  disabled={!stage.description}
+                  onClick={() => setExpanded(isOpen ? null : stage.stage)}
+                  className="flex w-full items-center gap-2 text-left"
+                >
+                  <span
+                    className={`text-sm font-semibold ${
+                      stage.status === "completed"
+                        ? "text-green-700 dark:text-green-400"
+                        : stage.status === "current"
+                          ? "text-indigo-700 dark:text-indigo-400"
+                          : "text-gray-600 dark:text-gray-300"
+                    }`}
+                  >
                     {timelineLabels[stage.stage] ?? stage.label}
                   </span>
-                  {stage.date && (
-                    <span className="text-[10px] text-gray-400">{new Date(stage.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  )}
-                </div>
-                {isCurrent && (
-                  <span className="absolute -top-1 right-0 inline-flex items-center rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                    Now
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                    {statusText[stage.status] ?? stage.status}
                   </span>
+                  {stage.description && (
+                    <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  )}
+                </button>
+                {stage.date && (
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(stage.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
                 )}
                 <AnimatePresence>
-                  {isExpanded && stage.description && (
-                    <motion.div
+                  {isOpen && stage.description && (
+                    <motion.p
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="absolute top-16 z-20 w-56 rounded-xl border bg-white p-3 shadow-lg dark:bg-gray-900 dark:border-gray-700 text-left"
+                      className="mt-1 overflow-hidden text-xs text-gray-600 dark:text-gray-300"
                     >
-                      <p className="text-xs text-gray-600 dark:text-gray-300">{stage.description}</p>
-                    </motion.div>
+                      {stage.description}
+                    </motion.p>
                   )}
                 </AnimatePresence>
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Mobile vertical */}
-      <div className="lg:hidden relative">
-        <div className="absolute left-5 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-700" />
-        <div className="space-y-4">
-          {data.stages.map((stage, i) => {
-            const isCurrent = stage.stage === data.currentStage;
-            const isExpanded = expandedStage === stage.stage;
-            return (
-              <motion.div
-                key={stage.stage}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="relative flex items-start gap-3"
-              >
-                <div className="relative z-10">
-                  <StageIcon stage={stage.stage} status={stage.status} isCurrent={isCurrent} />
-                </div>
-                <div className="flex-1 pt-1.5 min-w-0">
-                  <button
-                    onClick={() => setExpandedStage(isExpanded ? null : stage.stage)}
-                    className="flex items-center gap-1.5 text-left"
-                  >
-                    <span className={`text-sm font-semibold ${
-                      stage.status === "completed" ? "text-green-700 dark:text-green-400" :
-                      isCurrent ? "text-indigo-700 dark:text-indigo-400" : "text-gray-500"
-                    }`}>
-                      {timelineLabels[stage.stage] ?? stage.label}
-                    </span>
-                    {stage.description && (
-                      <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                    )}
-                    {isCurrent && (
-                      <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                        Current
-                      </span>
-                    )}
-                  </button>
-                  {stage.date && (
-                    <p className="text-xs text-gray-400">{new Date(stage.date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</p>
-                  )}
-                  <AnimatePresence>
-                    {isExpanded && stage.description && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-1 text-xs text-gray-500 dark:text-gray-400 overflow-hidden"
-                      >
-                        {stage.description}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
+              </div>
+            </motion.li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

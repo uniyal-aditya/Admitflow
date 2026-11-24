@@ -1,7 +1,29 @@
+// A fetch handler is required by Chrome/Edge for the app to count as installable.
+// Network-first for pages; falls back to a cached copy only when offline.
+const CACHE = "admitflow-v2";
 self.addEventListener("install", () => self.skipWaiting());
 
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+  if (req.url.includes("/api/")) return; // never cache live data
+  event.respondWith(
+    fetch(req)
+      .then((res) => {
+        if (req.mode === "navigate" && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then((hit) => hit || caches.match("/")))
+  );
+});
+
 self.addEventListener("activate", (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => clients.claim())
+  );
 });
 
 self.addEventListener("push", (event) => {

@@ -10,9 +10,14 @@ const PROVIDERS: Record<string, { baseUrl: string; defaultModel: string }> = {
   google: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", defaultModel: "gemini-2.0-flash" },
 };
 
-export async function GET() {
-  const admin = await requireAdmin();
-  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: Request) {
+  // Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; admins use their session.
+  const cronSecret = process.env.CRON_SECRET;
+  const isCron = !!cronSecret && req.headers.get("authorization") === `Bearer ${cronSecret}`;
+  if (!isCron) {
+    const admin = await requireAdmin();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const provider = (process.env.LLM_PROVIDER || "openrouter") as string;
   const modelName = process.env.LLM_MODEL || (PROVIDERS[provider]?.defaultModel || PROVIDERS.openrouter.defaultModel);

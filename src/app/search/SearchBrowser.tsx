@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X, Filter } from "lucide-react";
 import { NoticeCard } from "@/components/NoticeCard";
 import { CollegeCard } from "@/components/CollegeCard";
+import { PageHeading } from "@/components/gov/PageHeading";
 import type { College, Notice } from "@/types";
 
 type TabType = "all" | "notices" | "colleges";
@@ -64,44 +65,46 @@ function SearchContent({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Search</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Search across all notices, colleges, courses, and branches
-        </p>
-      </div>
+      <PageHeading
+        title="Search"
+        crumbs={[{ label: "Search" }]}
+        description="Search across notices, colleges, courses and branches."
+      />
 
-      <div className="relative max-w-2xl">
-        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search anything — CSE, Spot Round, GBPIET..."
-          autoFocus
-          className="w-full rounded-xl border bg-white/50 py-3 pl-12 pr-12 text-base backdrop-blur-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-900/50 dark:border-gray-700"
-        />
-        {query && (
-          <button
-            onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
-      </div>
+      <form role="search" onSubmit={(e) => e.preventDefault()} className="max-w-2xl">
+        <label htmlFor="main-search" className="mb-1 block text-sm font-semibold text-indigo-900 dark:text-indigo-200">What are you looking for?</label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+          <input
+            id="main-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="For example: CSE, spot round, GBPIET"
+            autoFocus
+            className="w-full rounded-md border border-gray-300 bg-white py-3 pl-11 pr-11 text-base text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      </form>
 
       {query.trim() && (
         <>
-          <div className="flex gap-1 rounded-xl border bg-white/50 p-1 dark:bg-gray-900/50 dark:border-gray-800 max-w-md">
+          <div role="tablist" aria-label="Result type" className="flex max-w-md border-b-2 border-gray-200 dark:border-gray-800">
             {tabs.map((t) => (
               <button
                 key={t.value}
+                role="tab"
+                aria-selected={tab === t.value}
                 onClick={() => setTab(t.value)}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                className={`-mb-0.5 flex-1 border-b-4 px-4 py-2 text-sm font-semibold ${
                   tab === t.value
-                    ? "bg-white text-indigo-700 shadow-sm dark:bg-gray-800 dark:text-indigo-300"
-                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    ? "border-saffron-500 text-indigo-900 dark:text-white"
+                    : "border-transparent text-gray-700 hover:text-indigo-900 dark:text-gray-300 dark:hover:text-white"
                 }`}
               >
                 {t.label} ({t.count})
@@ -119,11 +122,11 @@ function SearchContent({
             <div className={`space-y-8 transition-opacity ${isSearching ? "opacity-60" : ""}`}>
               {(tab === "all" || tab === "notices") && notices.length > 0 && (
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-indigo-900 dark:text-white flex items-center gap-2">
                     <Filter className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     Notices ({notices.length})
                   </h2>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
                     {notices.slice(0, tab === "notices" ? undefined : 6).map((notice) => (
                       <NoticeCard key={notice.id} notice={notice} />
                     ))}
@@ -141,7 +144,7 @@ function SearchContent({
 
               {(tab === "all" || tab === "colleges") && colleges.length > 0 && (
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-indigo-900 dark:text-white flex items-center gap-2">
                     <Filter className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     Colleges ({colleges.length})
                   </h2>
@@ -158,11 +161,11 @@ function SearchContent({
       )}
 
       {!query.trim() && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-          <Search className="h-16 w-16 mb-4" />
-          <p className="text-lg font-medium">Search anything</p>
-          <p className="text-sm max-w-md text-center">
-            Try searching for &quot;CSE&quot;, &quot;Spot Round&quot;, &quot;GBPIET&quot;, or &quot;Registration&quot;
+        <div className="rounded-md border border-dashed border-gray-300 bg-white py-12 text-center text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+          <Search className="mx-auto mb-3 h-10 w-10 text-gray-400" />
+          <p className="font-serif text-lg font-semibold">Type a word to start</p>
+          <p className="mx-auto mt-1 max-w-md text-sm">
+            Try &quot;CSE&quot;, &quot;spot round&quot;, &quot;GBPIET&quot; or &quot;registration&quot;.
           </p>
         </div>
       )}

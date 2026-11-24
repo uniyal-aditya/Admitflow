@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Noto_Sans, Noto_Serif } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
 import { NotificationProvider } from "@/components/NotificationProvider";
-import { Navbar } from "@/components/Navbar";
-import { Sidebar } from "@/components/Sidebar";
 import { ChatBot } from "@/components/ChatBot";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-noto-sans", display: "swap" });
+const notoSerif = Noto_Serif({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-noto-serif", display: "swap" });
 
 export const metadata: Metadata = {
   title: "AdmitFlow - Uttarakhand College Admission Companion",
@@ -42,7 +41,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${notoSans.variable} ${notoSerif.variable} font-sans`}>
         <ThemeProvider>
           <AuthProvider>
           <NotificationProvider>

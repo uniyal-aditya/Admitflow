@@ -57,14 +57,28 @@ export function deriveTimelineStages<S extends RawTimelineStage>(
   stages: S[],
   now: Date = new Date(),
 ): (S & { status: StageStatus })[] {
-  return stages.map((s) => {
+  return stages.map((s, i) => {
     let status = s.status as StageStatus;
-    if (s.status !== "current") {
-      const d = toDate(s.date);
-      if (d && d < now && status !== "completed") status = "completed";
+    if (s.status === "current") {
+      // A dataset "current" marker is only trusted while it is still true:
+      // if any LATER stage's date has already passed, the marker is stale
+      // (the process has moved on) and the stage falls back to date logic.
+      const staleMarker = stages.slice(i + 1).some((later) => {
+        const d = toDate(later.date);
+        return d !== null && d < now;
+      });
+      if (!staleMarker) return { ...s, status };
     }
+    const d = toDate(s.date);
+    if (d && d < now && status !== "completed") status = "completed";
+    if (s.status === "current" && status !== "completed") status = "upcoming";
     return { ...s, status };
   });
+}
+
+/** True when every stage is completed, i.e. the admission cycle is over. */
+export function isCycleEnded(stages: { status: string }[]): boolean {
+  return stages.length > 0 && stages.every((s) => s.status === "completed");
 }
 
 /**

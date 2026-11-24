@@ -37,10 +37,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (body[field] !== undefined) data[field] = body[field];
     }
     if (body.established !== undefined) {
-      data.established =
-        body.established === null || body.established === ""
-          ? null
-          : parseInt(body.established, 10) || body.established;
+      if (body.established === null || body.established === "") {
+        data.established = null;
+      } else {
+        const year = parseInt(body.established, 10);
+        if (!Number.isInteger(year) || year < 1800 || year > new Date().getFullYear()) {
+          return NextResponse.json({ error: "Established must be a valid year." }, { status: 400 });
+        }
+        data.established = year;
+      }
     }
 
     const college = await prisma.college.update({ where: { id }, data });

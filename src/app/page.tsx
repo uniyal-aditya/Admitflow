@@ -1,71 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import {
-  ArrowRight, Bell, BookOpen, BarChart3,
-  CalendarDays, Sparkles, Shield, Lightbulb, ChevronRight,
-  Menu, X, Moon, Sun,
-} from "lucide-react";
-import { useTheme } from "next-themes";
+import { BookOpen, Bell, CalendarDays, Search, MessageCircle, Lightbulb, MapPin, ArrowRight } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { HeroSlider } from "@/components/gov/HeroSlider";
+import { SafeImage } from "@/components/gov/SafeImage";
+import { quickLinks, siteStats, featuredColleges, howItWorks } from "@/data/site";
 
-const features = [
-  {
-    icon: Bell, title: "Unified Notice Center",
-    desc: "All college notices in one place. Never miss spot rounds, merit lists, or registration deadlines.",
-  },
-  {
-    icon: CalendarDays, title: "Admission Timeline",
-    desc: "Know exactly where each college's admission process stands in real-time.",
-  },
-  {
-    icon: BarChart3, title: "Analytics & Insights",
-    desc: "Track admission trends, notice patterns, and important statistics.",
-  },
-  {
-    icon: Sparkles, title: "Live Status Tracking",
-    desc: "Notices, timelines, and deadlines update automatically as dates pass — no stale pages, no guesswork.",
-  },
-  {
-    icon: Shield, title: "Reliable & Free",
-    desc: "No ads, no tracking, no hidden costs. Built solely for Uttarakhand students.",
-  },
-  {
-    icon: Lightbulb, title: "Smart Suggestions",
-    desc: "Help expand the database by suggesting colleges not yet listed.",
-  },
-];
-
-// Real dataset counts (74 colleges / 20 notices / 11 types) — kept as plain
-// data so the landing page never overstates coverage.
-const stats = [
-  { label: "Colleges Covered", value: "74" },
-  { label: "Notices Indexed", value: "20" },
-  { label: "Notice Types", value: "11" },
-  { label: "Free Forever", value: "₹0" },
-];
-
-const fadeUp = {
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-50px" },
-  transition: { duration: 0.5, ease: "easeOut" },
-};
-
-const stagger = {
-  initial: {},
-  whileInView: { transition: { staggerChildren: 0.08 } },
-  viewport: { once: true },
-};
+const icons = { BookOpen, Bell, CalendarDays, Search, MessageCircle, Lightbulb };
 
 export default function LandingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) router.replace("/dashboard");
@@ -73,155 +21,115 @@ export default function LandingPage() {
 
   if (loading || user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-label="Loading">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-white focus:text-sm focus:font-medium">
-        Skip to main content
-      </a>
-      <nav aria-label="Main navigation" className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-lg dark:bg-gray-950/80 dark:border-gray-800">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.svg" alt="AdmitFlow" className="h-8 w-8" />
-            <span className="font-bold text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:inline">AdmitFlow</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/about" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">About</Link>
-            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle dark mode"
-              className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:rotate-90 dark:scale-0" />
-              <Moon className="h-5 w-5 absolute inset-0 m-auto rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            </button>
-            <Link href="/login" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">Get Started</Link>
-          </div>
-          <div className="flex md:hidden items-center gap-2">
-            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle dark mode"
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle menu" aria-expanded={mobileOpen}>
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-        {mobileOpen && (
-          <div className="border-t px-4 py-3 md:hidden bg-white dark:bg-gray-950 dark:border-gray-800">
-            <div className="flex flex-col gap-2">
-              <Link href="/about" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">About</Link>
-              <Link href="/login" onClick={() => setMobileOpen(false)} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white text-center hover:bg-indigo-700 transition-colors">Get Started</Link>
-            </div>
-          </div>
-        )}
-      </nav>
+    <>
+      <HeroSlider />
 
-      <main id="main-content">
-        <section className="mx-auto max-w-6xl px-4 pt-20 pb-16 md:pt-32 md:pb-24 text-center">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="flex justify-center mb-8">
-            <img src="/logo.svg" alt="AdmitFlow" className="h-24 w-24 md:h-32 md:w-32" />
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="inline-flex items-center gap-2 rounded-full border bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800 mb-6">
-            Uttarakhand Government College Admissions
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="max-w-4xl mx-auto text-4xl md:text-6xl font-bold tracking-tight">
-            Never Miss a{" "}
-            <span className="gradient-text">College Admission</span>{" "}
-            Opportunity Again
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="mt-6 max-w-2xl mx-auto text-lg text-gray-500 dark:text-gray-400">
-            AdmitFlow collects, organizes, and displays admission information from all
-            Uttarakhand government colleges in one place. Stop visiting 10 websites every day.
-          </motion.p>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/25">
-              Get Started Free <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/about" className="inline-flex items-center gap-2 rounded-xl border px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
-              Learn More <ChevronRight className="h-4 w-4" />
-            </Link>
-          </motion.div>
-        </section>
+      {/* Quick links */}
+      <section aria-labelledby="quick-links" className="mx-auto max-w-7xl px-4 py-10">
+        <h2 id="quick-links" className="mb-5 text-2xl font-bold text-indigo-900 dark:text-white">Quick links</h2>
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((q) => {
+            const Icon = icons[q.icon];
+            return (
+              <li key={q.href}>
+                <Link href={q.href} className="flex h-full items-center gap-4 rounded-md border border-gray-200 border-l-4 border-l-saffron-500 bg-white p-4 transition-colors hover:bg-indigo-50 dark:border-gray-800 dark:border-l-saffron-500 dark:bg-gray-900 dark:hover:bg-gray-800">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200"><Icon className="h-6 w-6" /></span>
+                  <span>
+                    <span className="block font-semibold text-indigo-900 dark:text-white">{q.label}</span>
+                    <span className="block text-sm text-gray-600 dark:text-gray-400">{q.desc}</span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
-        <motion.section variants={stagger} initial="initial" whileInView="whileInView" viewport={{ once: true }} className="mx-auto max-w-6xl px-4 pb-16">
-          <motion.div variants={fadeUp} className="text-center mb-12">
-            <h2 className="text-3xl font-bold">Everything You Need</h2>
-            <p className="mt-3 text-gray-500 dark:text-gray-400">No more hopping between college websites. All admission info in one dashboard.</p>
-          </motion.div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={feature.title}
-                  variants={{
-                    initial: { opacity: 0, y: 20 },
-                    whileInView: { opacity: 1, y: 0 },
-                  }}
-                  className="group rounded-2xl border bg-white p-6 hover:shadow-lg hover:-translate-y-1 dark:bg-gray-900 dark:border-gray-800 transition-all duration-300"
-                >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white dark:bg-indigo-950/50 dark:text-indigo-400 dark:group-hover:bg-indigo-600 dark:group-hover:text-white transition-colors">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{feature.desc}</p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.section>
-
-        <motion.section variants={stagger} initial="initial" whileInView="whileInView" viewport={{ once: true }} className="mx-auto max-w-6xl px-4 pb-16">
-          <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat) => (
-              <motion.div
-                key={stat.label}
-                variants={{
-                  initial: { opacity: 0, y: 20 },
-                  whileInView: { opacity: 1, y: 0 },
-                }}
-                className="rounded-2xl border bg-white p-6 text-center dark:bg-gray-900 dark:border-gray-800"
-              >
-                <p className="text-3xl font-bold gradient-text">{stat.value}</p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{stat.label}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.section>
-
-        <motion.section variants={fadeUp} initial="initial" whileInView="whileInView" viewport={{ once: true }} className="mx-auto max-w-6xl px-4 pb-16">
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-8 md:p-12 text-white text-center">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
-              <img src="/logo.svg" alt="" className="mx-auto h-10 w-10 mb-4 opacity-80" />
-            </motion.div>
-            <h2 className="text-2xl md:text-3xl font-bold">Ready to Never Miss a Deadline?</h2>
-            <p className="mt-3 max-w-xl mx-auto opacity-80">
-              Join thousands of Uttarakhand students who use AdmitFlow to track college admissions.
-              Free forever. No ads. No tracking.
+      {/* About */}
+      <section aria-labelledby="about" className="bg-white dark:bg-gray-950">
+        <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 md:grid-cols-2">
+          <div>
+            <h2 id="about" className="text-2xl font-bold text-indigo-900 dark:text-white">About AdmitFlow</h2>
+            <p className="mt-4 max-w-prose text-gray-700 dark:text-gray-300">
+              Admission news for Uttarakhand colleges is spread across many websites, PDFs and notice boards. AdmitFlow gathers it in one place so students and parents can see what is open, what has closed and where to apply.
             </p>
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-gray-100 transition-colors">
-                Get Started Free <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+            <p className="mt-3 max-w-prose text-gray-700 dark:text-gray-300">
+              Every college page links to the official website. Please confirm dates and fees there before you apply.
+            </p>
+            <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-gray-200 pt-5 dark:border-gray-800">
+              {siteStats.map((s) => (
+                <div key={s.label}>
+                  <dd className="font-serif text-3xl font-bold text-indigo-800 dark:text-indigo-200">{s.value}</dd>
+                  <dt className="text-sm text-gray-600 dark:text-gray-400">{s.label}</dt>
+                </div>
+              ))}
+            </dl>
           </div>
-        </motion.section>
-      </main>
-      <footer className="border-t bg-gray-50 dark:bg-gray-900 dark:border-gray-800">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-            <p>&copy; {new Date().getFullYear()} AdmitFlow. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <Link href="/privacy" className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Privacy</Link>
-              <Link href="/tos" className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Terms</Link>
-              <Link href="/about" className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors">About</Link>
-            </div>
-          </div>
+          <SafeImage
+            src="/images/about/about.jpg"
+            alt="Students studying together on a campus lawn"
+            className="h-72 w-full rounded-md object-cover md:h-80"
+          />
         </div>
-      </footer>
-    </div>
+      </section>
+
+      {/* Featured colleges */}
+      <section aria-labelledby="featured" className="mx-auto max-w-7xl px-4 py-12">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <h2 id="featured" className="text-2xl font-bold text-indigo-900 dark:text-white">Featured colleges</h2>
+          <Link href="/colleges" className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-800 hover:underline dark:text-indigo-200">View all colleges <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {featuredColleges.map((c) => (
+            <li key={c.id}>
+              <Link href={`/colleges/${c.id}`} className="group block overflow-hidden rounded-md border border-gray-200 bg-white hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+                <SafeImage src={`/images/colleges/${c.id}.jpg`} alt={`${c.name} campus`} className="h-40 w-full object-cover" />
+                <div className="p-4">
+                  <h3 className="font-serif text-lg font-semibold leading-snug text-indigo-900 group-hover:underline dark:text-white">{c.name}</h3>
+                  <p className="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400"><MapPin className="h-3.5 w-3.5" />{c.place}</p>
+                  <p className="mt-2 inline-block rounded bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200">{c.kind}</p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* How it works */}
+      <section aria-labelledby="how" className="bg-indigo-50 dark:bg-gray-900">
+        <div className="mx-auto max-w-7xl px-4 py-12">
+          <h2 id="how" className="text-2xl font-bold text-indigo-900 dark:text-white">How to use AdmitFlow</h2>
+          <ol className="mt-6 grid gap-6 md:grid-cols-3">
+            {howItWorks.map((s, i) => (
+              <li key={s.title} className="flex gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-800 font-serif text-lg font-bold text-white">{i + 1}</span>
+                <div>
+                  <h3 className="font-serif text-lg font-semibold text-indigo-900 dark:text-white">{s.title}</h3>
+                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Sign-up band */}
+      <section className="bg-indigo-900 text-white">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-4 py-10 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Create a free account</h2>
+            <p className="mt-1 text-white/80">Save colleges to your watchlist and get notified about new notices.</p>
+          </div>
+          <Link href="/login" className="rounded-md bg-saffron-500 px-6 py-3 text-sm font-semibold text-white hover:bg-saffron-600">Sign in or register</Link>
+        </div>
+      </section>
+    </>
   );
 }

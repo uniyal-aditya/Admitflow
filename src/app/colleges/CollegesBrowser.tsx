@@ -1,30 +1,28 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { Search, Building2, Lightbulb, SlidersHorizontal, X } from "lucide-react";
 import { CollegeCard } from "@/components/CollegeCard";
-import {
-  Search, Building2, GraduationCap, University, HeartPulse,
-  Layers, Scale, Pill, Briefcase, Sparkles, Lightbulb, SlidersHorizontal,
-} from "lucide-react";
+import { PageHeading } from "@/components/gov/PageHeading";
 import type { College, CollegeType, Ownership } from "@/types";
 
 type TabType = CollegeType | "all";
 
-const tabs: { label: string; value: TabType; icon: React.ElementType }[] = [
-  { label: "All", value: "all", icon: Building2 },
-  { label: "Universities", value: "university", icon: University },
-  { label: "Engineering", value: "engineering", icon: GraduationCap },
-  { label: "Medical", value: "medical", icon: HeartPulse },
-  { label: "Degree (Arts/Sci/Com)", value: "degree", icon: Layers },
-  { label: "Polytechnic", value: "polytechnic", icon: Sparkles },
-  { label: "Law", value: "law", icon: Scale },
-  { label: "Pharmacy", value: "pharmacy", icon: Pill },
-  { label: "Management", value: "management", icon: Briefcase },
-  { label: "Other", value: "other", icon: Sparkles },
+const typeOptions: { label: string; value: TabType }[] = [
+  { label: "All types", value: "all" },
+  { label: "Universities", value: "university" },
+  { label: "Engineering", value: "engineering" },
+  { label: "Medical", value: "medical" },
+  { label: "Degree (Arts, Science, Commerce)", value: "degree" },
+  { label: "Polytechnic", value: "polytechnic" },
+  { label: "Law", value: "law" },
+  { label: "Pharmacy", value: "pharmacy" },
+  { label: "Management", value: "management" },
+  { label: "Other", value: "other" },
 ];
 
-const ownerships: { label: string; value: Ownership | "all" }[] = [
+const ownershipOptions: { label: string; value: Ownership | "all" }[] = [
   { label: "All", value: "all" },
   { label: "Government", value: "government" },
   { label: "Private", value: "private" },
@@ -33,172 +31,159 @@ const ownerships: { label: string; value: Ownership | "all" }[] = [
   { label: "Aided", value: "aided" },
 ];
 
-export function CollegesBrowser({
-  colleges,
-  districts,
-}: {
-  colleges: College[];
-  districts: string[];
-}) {
+const PAGE_SIZE = 24;
+
+export function CollegesBrowser({ colleges, districts }: { colleges: College[]; districts: string[] }) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TabType>("all");
   const [ownershipFilter, setOwnershipFilter] = useState<Ownership | "all">("all");
-  const [districtFilter, setDistrictFilter] = useState<string>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [districtFilter, setDistrictFilter] = useState("all");
+  const [sort, setSort] = useState<"name" | "oldest" | "newest">("name");
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    return colleges.filter((c) => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !c.name.toLowerCase().includes(q) &&
-          !c.shortName.toLowerCase().includes(q) &&
-          !c.location.toLowerCase().includes(q) &&
-          !c.district.toLowerCase().includes(q)
-        ) return false;
-      }
+    const q = search.trim().toLowerCase();
+    const list = colleges.filter((c) => {
+      if (q && ![c.name, c.shortName, c.location, c.district].some((f) => f.toLowerCase().includes(q))) return false;
       if (typeFilter !== "all" && c.type !== typeFilter) return false;
       if (ownershipFilter !== "all" && c.ownership !== ownershipFilter) return false;
       if (districtFilter !== "all" && c.district !== districtFilter) return false;
       return true;
     });
-  }, [colleges, search, typeFilter, ownershipFilter, districtFilter]);
+    return [...list].sort((a, b) =>
+      sort === "name" ? a.name.localeCompare(b.name)
+        : sort === "oldest" ? (a.established || 9999) - (b.established || 9999)
+          : (b.established || 0) - (a.established || 0),
+    );
+  }, [colleges, search, typeFilter, ownershipFilter, districtFilter, sort]);
+
+  useEffect(() => setVisible(PAGE_SIZE), [search, typeFilter, ownershipFilter, districtFilter, sort]);
+
+  const typeCounts = useMemo(() => {
+    const m: Record<string, number> = { all: colleges.length };
+    colleges.forEach((c) => { m[c.type] = (m[c.type] ?? 0) + 1; });
+    return m;
+  }, [colleges]);
 
   const activeFilters = [typeFilter !== "all", ownershipFilter !== "all", districtFilter !== "all"].filter(Boolean).length;
+  const reset = () => { setTypeFilter("all"); setOwnershipFilter("all"); setDistrictFilter("all"); setSearch(""); };
 
-  return (
+  const field = "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
+  const legend = "mb-2 font-serif text-base font-semibold text-indigo-900 dark:text-white";
+
+  const filters = (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">College Profiles</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Browse {colleges.length} Uttarakhand colleges
-          </p>
-        </div>
-        <Link
-          href="/suggest"
-          className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
-        >
-          <Lightbulb className="h-4 w-4" />
-          Suggest Missing College
-        </Link>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search colleges by name, location..."
-              className="w-full rounded-xl border bg-white/50 py-2.5 pl-10 pr-4 text-sm backdrop-blur-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-gray-900/50 dark:border-gray-700"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
-              showFilters || activeFilters > 0
-                ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-300"
-                : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-            }`}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-            {activeFilters > 0 && (
-              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-indigo-600 text-white text-xs">{activeFilters}</span>
-            )}
-          </button>
-        </div>
-
-        {/* Type tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.value}
-                onClick={() => setTypeFilter(t.value)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium transition-colors ${
-                  typeFilter === t.value
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "border bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Advanced filters */}
-        {showFilters && (
-          <div className="rounded-xl border bg-white p-4 space-y-4 dark:bg-gray-900 dark:border-gray-800">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Advanced Filters</span>
-              <button
-                onClick={() => { setOwnershipFilter("all"); setDistrictFilter("all"); setTypeFilter("all"); }}
-                className="text-xs text-indigo-600 hover:underline"
-              >
-                Clear all
-              </button>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Ownership</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {ownerships.map((o) => (
-                    <button
-                      key={o.value}
-                      onClick={() => setOwnershipFilter(o.value)}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                        ownershipFilter === o.value
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">District</label>
-                <select
-                  value={districtFilter}
-                  onChange={(e) => setDistrictFilter(e.target.value)}
-                  className="w-full rounded-lg border bg-white px-3 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-700"
-                >
-                  <option value="all">All Districts</option>
-                  {districts.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <p className="text-sm text-gray-500">
-        Showing {filtered.length} of {colleges.length} colleges
-      </p>
-
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-          <Building2 className="h-12 w-12 mb-4" />
-          <p className="text-lg font-medium">No colleges found</p>
-          <p className="text-sm">Try adjusting your search or filters</p>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((college) => (
-            <CollegeCard key={college.id} college={college} />
+      <fieldset>
+        <legend className={legend}>College type</legend>
+        <div className="space-y-1.5">
+          {typeOptions.filter((o) => o.value === "all" || typeCounts[o.value]).map((o) => (
+            <label key={o.value} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="radio" name="type" checked={typeFilter === o.value} onChange={() => setTypeFilter(o.value)} className="h-4 w-4 accent-indigo-800" />
+              <span className="flex-1">{o.label}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">{typeCounts[o.value] ?? 0}</span>
+            </label>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className={legend}>Ownership</legend>
+        <div className="space-y-1.5">
+          {ownershipOptions.map((o) => (
+            <label key={o.value} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="radio" name="ownership" checked={ownershipFilter === o.value} onChange={() => setOwnershipFilter(o.value)} className="h-4 w-4 accent-indigo-800" />
+              {o.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div>
+        <label htmlFor="district" className={`block ${legend}`}>District</label>
+        <select id="district" value={districtFilter} onChange={(e) => setDistrictFilter(e.target.value)} className={field}>
+          <option value="all">All districts</option>
+          {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+      </div>
+
+      {activeFilters > 0 && (
+        <button type="button" onClick={reset} className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-800 underline dark:text-indigo-200">
+          <X className="h-4 w-4" /> Clear all filters
+        </button>
       )}
+    </div>
+  );
+
+  return (
+    <div>
+      <PageHeading
+        title="College profiles"
+        crumbs={[{ label: "Colleges" }]}
+        description={`Browse ${colleges.length} colleges across Uttarakhand. Use the filters to narrow the list by type, ownership or district.`}
+        action={
+          <Link href="/suggest" className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-900 hover:bg-indigo-50 dark:border-gray-700 dark:bg-gray-900 dark:text-indigo-200 dark:hover:bg-gray-800">
+            <Lightbulb className="h-4 w-4" /> Suggest a missing college
+          </Link>
+        }
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[17rem_1fr]">
+        {/* Desktop filter panel */}
+        <aside aria-label="Filters" className="hidden h-fit rounded-md border border-gray-200 bg-white p-5 lg:block dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="mb-4 border-b-2 border-saffron-500 pb-2 text-lg font-bold text-indigo-900 dark:text-white">Refine results</h2>
+          {filters}
+        </aside>
+
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <label htmlFor="college-search" className="sr-only">Search colleges</label>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input id="college-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by college name, city or district" className={`${field} pl-9`} />
+            </div>
+            <div className="flex gap-3">
+              <label htmlFor="sort" className="sr-only">Sort colleges</label>
+              <select id="sort" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className={`${field} sm:w-48`}>
+                <option value="name">Name (A to Z)</option>
+                <option value="oldest">Oldest first</option>
+                <option value="newest">Newest first</option>
+              </select>
+              <button type="button" onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-indigo-900 lg:hidden dark:border-gray-700 dark:bg-gray-900 dark:text-indigo-200">
+                <SlidersHorizontal className="h-4 w-4" /> Filters{activeFilters > 0 && ` (${activeFilters})`}
+              </button>
+            </div>
+          </div>
+
+          {panelOpen && <div className="rounded-md border border-gray-200 bg-white p-5 lg:hidden dark:border-gray-800 dark:bg-gray-900">{filters}</div>}
+
+          <p role="status" aria-live="polite" className="text-sm text-gray-700 dark:text-gray-300">
+            Showing <strong>{Math.min(visible, filtered.length)}</strong> of <strong>{filtered.length}</strong> colleges
+          </p>
+
+          {filtered.length === 0 ? (
+            <div className="rounded-md border border-dashed border-gray-300 bg-white py-14 text-center dark:border-gray-700 dark:bg-gray-900">
+              <Building2 className="mx-auto mb-3 h-10 w-10 text-gray-400" />
+              <p className="font-serif text-lg font-semibold">No colleges match your search</p>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Check the spelling or clear some filters.</p>
+              <button type="button" onClick={reset} className="mt-4 rounded-md bg-indigo-800 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-900">Clear all filters</button>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filtered.slice(0, visible).map((c) => <CollegeCard key={c.id} college={c} />)}
+              </div>
+              {visible < filtered.length && (
+                <div className="pt-2 text-center">
+                  <button type="button" onClick={() => setVisible((v) => v + PAGE_SIZE)} className="rounded-md border border-indigo-800 px-6 py-2.5 text-sm font-semibold text-indigo-800 hover:bg-indigo-50 dark:border-indigo-300 dark:text-indigo-200 dark:hover:bg-gray-800">
+                    Show {Math.min(PAGE_SIZE, filtered.length - visible)} more colleges
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

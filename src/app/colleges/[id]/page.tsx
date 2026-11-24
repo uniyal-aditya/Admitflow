@@ -1,15 +1,13 @@
 import Link from "next/link";
-import {
-  ArrowLeft, ExternalLink, Globe, Mail, Phone, MapPin,
-  Calendar, BookOpen, GraduationCap, DollarSign,
-  Users, Award, Building2, ChevronRight, Clock, Bell,
-} from "lucide-react";
+import { ExternalLink, Globe, Mail, Phone, MapPin, Building2, ChevronRight } from "lucide-react";
 import { getCollegeDetail } from "@/lib/services/admission";
 import { CollegeLogo } from "@/components/CollegeLogo";
+import { SafeImage } from "@/components/gov/SafeImage";
+import { getCollegeVerification } from "@/lib/services/verification";
 import { FavoriteStar } from "@/components/FavoriteStar";
 import { NoticeCard } from "@/components/NoticeCard";
 import { Timeline } from "@/components/Timeline";
-import { noticeTypeColor, collegeTypeLabel, ownershipColor, computeTimeline } from "@/lib/utils";
+import { collegeTypeLabel, computeTimeline } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -35,190 +33,182 @@ export default async function CollegeDetailPage({
   const timeline = rawTimeline ? computeTimeline(rawTimeline) : undefined;
   const activeNotices = collegeNotices.filter((n) => n.lastDate ? new Date(n.lastDate) >= new Date() : true);
 
+  const verification = await getCollegeVerification(college.id).catch(() => null);
+  const fieldLabels: Record<string, string> = { name: "name", website: "website", established: "year established", location: "location", district: "district", contactPhone: "phone", contactEmail: "email", accreditation: "accreditation", affiliation: "affiliation", type: "type", ownership: "ownership" };
+  const ownershipLabel =
+    college.ownership === "government" ? "Government" : college.ownership === "private" ? "Private" : college.ownership === "deemed" ? "Deemed university" : college.ownership;
+  const facts: [string, string][] = [
+    ["Established", college.established ? String(college.established) : "Not available"],
+    ["Accreditation", college.accreditation ?? "Not available"],
+    ["Affiliation", college.affiliation ?? "Not available"],
+    ["Type", collegeTypeLabel(college.type, college.ownership)],
+    ["Ownership", ownershipLabel],
+    ["Location", college.location],
+  ];
+  const card = "rounded-md border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900";
+  const h2 = "mb-4 border-b-2 border-saffron-500 pb-2 text-xl font-bold text-indigo-900 inline-block dark:text-white";
+
   return (
-    <div className="space-y-8">
-      <Link
-        href="/colleges"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Colleges
-      </Link>
+    <div className="space-y-6">
+      <nav aria-label="Breadcrumb" className="text-sm text-gray-600 dark:text-gray-400">
+        <Link href="/" className="hover:underline">Home</Link>
+        <span className="mx-2">/</span>
+        <Link href="/colleges" className="hover:underline">Colleges</Link>
+        <span className="mx-2">/</span>
+        <span aria-current="page" className="text-gray-900 dark:text-gray-200">{college.shortName}</span>
+      </nav>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-1 space-y-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <CollegeLogo collegeId={college.id} name={college.shortName} size="lg" />
-              <div>
-                <h1 className="text-2xl font-bold">{college.name}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${noticeTypeColor(college.type === "university" ? "admission" : "registration")}`}>
-                    {collegeTypeLabel(college.type, college.ownership)}
-                  </span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ownershipColor(college.ownership)}`}>
-                    {college.ownership === "government" ? "Government" : college.ownership === "private" ? "Private" : college.ownership === "deemed" ? "Deemed University" : college.ownership}
-                  </span>
-                  <span className="flex items-center gap-1 text-sm text-gray-500">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {college.location}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <FavoriteStar id={college.id} />
-          </div>
-
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-            {college.description}
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
-              <Calendar className="h-4 w-4 text-gray-400 mb-1" />
-              <p className="text-xs text-gray-400">Established</p>
-              <p className="font-semibold text-sm">{college.established || "—"}</p>
-            </div>
-            <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
-              <Award className="h-4 w-4 text-gray-400 mb-1" />
-              <p className="text-xs text-gray-400">Accreditation</p>
-              <p className="font-semibold text-sm">{college.accreditation ?? "—"}</p>
-            </div>
-            <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
-              <BookOpen className="h-4 w-4 text-gray-400 mb-1" />
-              <p className="text-xs text-gray-400">Courses</p>
-              <p className="font-semibold text-sm">{college.courses.length} programs</p>
-            </div>
-            <div className="rounded-xl border bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
-              <Users className="h-4 w-4 text-gray-400 mb-1" />
-              <p className="text-xs text-gray-400">Affiliation</p>
-              <p className="font-semibold text-sm truncate">{college.affiliation ?? "—"}</p>
+      {/* Banner */}
+      <header className="relative overflow-hidden rounded-md">
+        <SafeImage
+          src={(college as { imageUrl?: string | null }).imageUrl || `/images/colleges/${college.id}.jpg`}
+          alt={`${college.name} campus`}
+          className="h-56 w-full object-cover md:h-72"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/90 via-indigo-950/40 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 p-5 text-white">
+          <div className="flex items-center gap-4">
+            <div className="rounded-md bg-white p-1.5"><CollegeLogo collegeId={college.id} name={college.shortName} size="lg" /></div>
+            <div>
+              <h1 className="text-2xl font-bold leading-tight text-white md:text-3xl">{college.name}</h1>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/90">
+                <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{college.location}</span>
+                <span className="rounded bg-white/20 px-2 py-0.5 text-xs font-medium">{ownershipLabel}</span>
+                <span className="rounded bg-white/20 px-2 py-0.5 text-xs font-medium">{collegeTypeLabel(college.type, college.ownership)}</span>
+              </p>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-3">
             {college.website && (
-              <a
-                href={college.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-              >
-                <Globe className="h-4 w-4" />
-                Official Website
-                <ExternalLink className="h-3 w-3" />
+              <a href={college.website} data-tour="official-site" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-md bg-saffron-500 px-4 py-2 text-sm font-semibold text-white hover:bg-saffron-600">
+                <Globe className="h-4 w-4" /> Official website <ExternalLink className="h-3 w-3" />
               </a>
             )}
+            <span data-tour="watch-star" className="rounded-md bg-white/90 p-1.5 text-indigo-900"><FavoriteStar id={college.id} /></span>
           </div>
+        </div>
+      </header>
 
-          {college.contact && (
-            <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
-              <h2 className="font-semibold mb-4">Contact Information</h2>
-              <div className="space-y-3">
-                {college.contact.phone && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span>{college.contact.phone}</span>
-                  </div>
-                )}
-                {college.contact.email && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <span>{college.contact.email}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              Available Courses
-            </h2>
-            <div className="space-y-3">
-              {college.courses.map((course) => (
-                <div
-                  key={course.name}
-                  className="rounded-lg border bg-gray-50 p-4 dark:bg-gray-800/50 dark:border-gray-700"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">{course.name}</p>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      {course.duration && (
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{course.duration}</span>
-                      )}
-                      {course.seats > 0 && (
-                        <span className="flex items-center gap-1"><Users className="h-3 w-3" />{course.seats} seats</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                    {course.fees > 0 && (
-                      <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />₹{course.fees.toLocaleString("en-IN")}/yr</span>
-                    )}
-                    {course.eligibility && <span>{course.eligibility}</span>}
-                  </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+        <div className="space-y-6">
+          <section className={card}>
+            <h2 className={h2}>About</h2>
+            <p className="max-w-prose leading-relaxed text-gray-700 dark:text-gray-300">{college.description || "A description for this college has not been added yet."}</p>
+            <dl className="mt-5 grid gap-x-8 gap-y-3 border-t border-gray-200 pt-4 text-sm sm:grid-cols-2 dark:border-gray-800">
+              {facts.map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-4 border-b border-dashed border-gray-200 pb-2 dark:border-gray-800">
+                  <dt className="text-gray-600 dark:text-gray-400">{k}</dt>
+                  <dd className="text-right font-medium text-gray-900 dark:text-gray-100">{v}</dd>
                 </div>
               ))}
-            </div>
-          </div>
+            </dl>
+          </section>
+
+          <section data-tour="courses" className={card}>
+            <h2 className={h2}>Courses offered</h2>
+            {college.courses.length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">Course details have not been added yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[34rem] text-left text-sm">
+                  <thead>
+                    <tr className="bg-indigo-900 text-white">
+                      <th scope="col" className="px-3 py-2 font-semibold">Course</th>
+                      <th scope="col" className="px-3 py-2 font-semibold">Duration</th>
+                      <th scope="col" className="px-3 py-2 font-semibold">Seats</th>
+                      <th scope="col" className="px-3 py-2 font-semibold">Fees per year</th>
+                      <th scope="col" className="px-3 py-2 font-semibold">Eligibility</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {college.courses.map((c) => (
+                      <tr key={c.name} className="border-b border-gray-200 even:bg-indigo-50/50 dark:border-gray-800 dark:even:bg-gray-800/40">
+                        <th scope="row" className="px-3 py-2 font-medium text-indigo-900 dark:text-indigo-200">{c.name}</th>
+                        <td className="px-3 py-2">{c.duration || "-"}</td>
+                        <td className="px-3 py-2">{c.seats > 0 ? c.seats : "-"}</td>
+                        <td className="px-3 py-2">{c.fees > 0 ? `₹${c.fees.toLocaleString("en-IN")}` : "-"}</td>
+                        <td className="px-3 py-2">{c.eligibility || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">Seats, fees and eligibility come from public sources and can change every year. Confirm them on the official website.</p>
+          </section>
+
+          <section className={card}>
+            <h2 className={h2}>Notices from {college.shortName}</h2>
+            {collegeNotices.length === 0 ? (
+              <p className="text-gray-700 dark:text-gray-300">
+                No notices have been published for this college yet.
+                {college.website && <> Check the <a href={college.website} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-800 underline dark:text-indigo-200">official website</a> for the latest admission information.</>}
+              </p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {collegeNotices.slice(0, 6).map((notice) => <NoticeCard key={notice.id} notice={notice} />)}
+              </div>
+            )}
+            {collegeNotices.length > 6 && (
+              <Link href={`/notices?college=${college.id}`} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-indigo-800 hover:underline dark:text-indigo-200">
+                View all {collegeNotices.length} notices <ChevronRight className="h-4 w-4" />
+              </Link>
+            )}
+          </section>
         </div>
 
-        <div className="lg:w-96 space-y-6">
+        <aside className="space-y-6">
           {timeline && (
-            <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
-              <h2 className="font-semibold mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                Admission Timeline
-              </h2>
+            <section data-tour="timeline" className={card}>
+              <h2 className={h2}>Admission timeline</h2>
               <Timeline data={timeline} />
-            </div>
+            </section>
           )}
 
-          <div className="rounded-xl border bg-white p-5 dark:bg-gray-900 dark:border-gray-800">
-            <h2 className="font-semibold mb-4">Quick Stats</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Total Notices</span>
-                <span className="font-medium">{collegeNotices.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Active Notices</span>
-                <span className="font-medium text-green-600">{activeNotices.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Courses Offered</span>
-                <span className="font-medium">{college.courses.length}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <section className={card}>
+            <h2 className={h2}>Data check</h2>
+            {verification && verification.fields.length > 0 ? (
+              <>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  Our team checked these details against official sources
+                  {verification.lastVerifiedAt && <> on {verification.lastVerifiedAt.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</>}:
+                  {" "}{verification.fields.map((f) => fieldLabels[f] ?? f).join(", ")}.
+                </p>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {verification.sources.slice(0, 4).map((s) => (
+                    <li key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer" className="break-words text-indigo-800 underline dark:text-indigo-200">{s.name}<span className="sr-only"> (opens in a new tab)</span></a></li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-gray-700 dark:text-gray-300">Anything not listed above has not been checked yet.</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-800 dark:text-gray-200">The details on this page have not been checked by our team yet. Please confirm them on the official website.</p>
+            )}
+          </section>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Bell className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          Notices from {college.shortName}
-        </h2>
-        {collegeNotices.length === 0 ? (
-          <p className="text-gray-400">No notices yet</p>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-3">
-            {collegeNotices.slice(0, 6).map((notice) => (
-              <NoticeCard key={notice.id} notice={notice} />
-            ))}
-          </div>
-        )}
-        {collegeNotices.length > 6 && (
-          <Link
-            href={`/notices?college=${college.id}`}
-            className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-          >
-            View all {collegeNotices.length} notices
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        )}
+          <section className={card}>
+            <h2 className={h2}>At a glance</h2>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-gray-600 dark:text-gray-400">Notices published</dt><dd className="font-semibold">{collegeNotices.length}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-600 dark:text-gray-400">Notices still open</dt><dd className="font-semibold text-gov-green-700 dark:text-green-400">{activeNotices.length}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-600 dark:text-gray-400">Courses listed</dt><dd className="font-semibold">{college.courses.length}</dd></div>
+            </dl>
+          </section>
+
+          {college.contact && (college.contact.phone || college.contact.email) && (
+            <section className={card}>
+              <h2 className={h2}>Contact</h2>
+              <ul className="space-y-3 text-sm">
+                {college.contact.phone && (
+                  <li className="flex items-center gap-3"><Phone className="h-4 w-4 text-indigo-700 dark:text-indigo-300" /><a href={`tel:${college.contact.phone}`} className="hover:underline">{college.contact.phone}</a></li>
+                )}
+                {college.contact.email && (
+                  <li className="flex items-center gap-3"><Mail className="h-4 w-4 text-indigo-700 dark:text-indigo-300" /><a href={`mailto:${college.contact.email}`} className="break-all hover:underline">{college.contact.email}</a></li>
+                )}
+              </ul>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   );

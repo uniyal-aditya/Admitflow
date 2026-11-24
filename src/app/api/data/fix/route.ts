@@ -11,7 +11,11 @@ async function applySingleFix(admin: { email: string }, fix: { id: string; field
     if (!existing) return { error: "College not found" };
 
     const updateData: any = {};
-    if (field === "established") updateData.established = parseInt(value) || value;
+    if (field === "established") {
+      const year = parseInt(value, 10);
+      if (!Number.isInteger(year) || year < 1800 || year > new Date().getFullYear()) return { error: `Invalid established year: ${value}` };
+      updateData.established = year;
+    }
     else if (["ownership", "type", "location", "district", "website", "name", "shortName"].includes(field)) updateData[field] = value;
     else return { error: `Unsupported college field: ${field}` };
 
