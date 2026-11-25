@@ -18,3 +18,5 @@ prisma/dev.db*
 
 # build info
 *.tsbuildinfo
+
+tsconfig.tsbuildinfo
