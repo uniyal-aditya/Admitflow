@@ -13,7 +13,15 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
-    /\.(png|jpg|jpeg|svg|ico|webp|css|js)$/.test(pathname);
+    // Static files must never be redirected to the login page, otherwise images,
+    // the app manifest and the service worker break for signed-out visitors.
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname === "/robots.txt" ||
+    pathname.startsWith("/images/") ||
+    pathname.startsWith("/logos/") ||
+    pathname.startsWith("/icons/") ||
+    /\.(png|jpe?g|gif|svg|ico|webp|avif|css|js|map|woff2?|json|txt)$/i.test(pathname);
 
   // Rate limit all API routes (except auth)
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth")) {

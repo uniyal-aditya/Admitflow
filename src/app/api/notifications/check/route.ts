@@ -56,7 +56,7 @@ export async function POST() {
         userId: session.id,
         type: n.type,
         title: n.title,
-        collegeName: "",
+        collegeName: n.collegeShortName ?? "",
         message: n.summary || n.title,
         noticeId: n.id,
         createdAt: now,

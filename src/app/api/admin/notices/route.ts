@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, NoticeTypeEnum, EditorialStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { after } from "next/server";
+import { notifyFollowers } from "@/lib/services/notice-fanout";
+import {
+  NoticeValidationError, cleanTitle, cleanSummary, cleanOptionalUrl, cleanList, checkDateOrder, makeNoticeId,
+} from "@/lib/notice-validation";
 
 // ─── Shared validation / mapping ─────────────────────────────────────────
 // The canonical Notice model stores structured dates in NoticeDate rows and
@@ -79,19 +84,26 @@ export async function GET() {
 
 // ─── POST /api/admin/notices ─────────────────────────────────────────────
 
+/** "<college>-<slug>", with -2, -3 ... added if that id is taken. */
+async function uniqueNoticeId(collegeId: string, title: string): Promise<string> {
+  const base = makeNoticeId(collegeId, title);
+  for (let n = 1; n < 50; n++) {
+    const candidate = n === 1 ? base : `${base.slice(0, 96)}-${n}`;
+    if (!(await prisma.notice.findUnique({ where: { id: candidate }, select: { id: true } }))) return candidate;
+  }
+  throw new Error("Could not create a unique notice id");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { id, collegeId, title, type, summary, officialUrl, pdfUrl, editorialStatus } = body;
+    const { collegeId, type, editorialStatus } = body;
 
-    if (!id || !collegeId || !title || !type) {
-      return NextResponse.json(
-        { error: "Missing required fields: id, collegeId, title, type" },
-        { status: 400 },
-      );
+    if (!collegeId || !type) {
+      return NextResponse.json({ error: "Choose a college and a notice type." }, { status: 400 });
     }
     if (!NOTICE_TYPES.has(type)) {
       return NextResponse.json({ error: `Invalid notice type: ${type}` }, { status: 400 });
@@ -100,32 +112,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Invalid editorial status: ${editorialStatus}` }, { status: 400 });
     }
 
+    let title: string, summary: string | null, officialUrl: string | null, pdfUrl: string | null, documentsRequired: string[];
+    let mapped;
+    try {
+      title = cleanTitle(body.title);
+      summary = cleanSummary(body.summary);
+      officialUrl = cleanOptionalUrl(body.officialUrl, "The official notice link");
+      pdfUrl = cleanOptionalUrl(body.pdfUrl, "The PDF link");
+      documentsRequired = cleanList(body.documentsRequired, "Documents required");
+      mapped = mapNoticeDates(body);
+      const lastDeadline = mapped.dates.filter((d) => d.kind === "deadline").map((d) => d.date).sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+      checkDateOrder(mapped.publishedAt, lastDeadline);
+    } catch (e) {
+      if (e instanceof NoticeValidationError || e instanceof Error) {
+        return NextResponse.json({ error: e.message }, { status: 400 });
+      }
+      throw e;
+    }
+
     const college = await prisma.college.findUnique({ where: { id: collegeId } });
     if (!college) return NextResponse.json({ error: "College not found" }, { status: 404 });
 
-    let mapped;
-    try {
-      mapped = mapNoticeDates(body);
-    } catch (e) {
-      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    const sessionId = await resolveSessionId(body.sessionId);
+
+    // Same college, same title, same session: almost certainly an accidental second entry.
+    const duplicate = await prisma.notice.findFirst({
+      where: { collegeId, sessionId, title: { equals: title, mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (duplicate && !body.allowDuplicate) {
+      return NextResponse.json(
+        { error: "A notice with this title already exists for this college.", duplicateOf: duplicate.id },
+        { status: 409 },
+      );
     }
 
-    const sessionId = await resolveSessionId(body.sessionId);
+    const id = await uniqueNoticeId(collegeId, title);
+    const status = (editorialStatus as EditorialStatus) ?? "published";
 
     const notice = await prisma.notice.create({
       data: {
-        id,
-        collegeId,
-        sessionId,
-        title,
-        type,
-        summary: summary || null,
-        officialUrl: officialUrl || null,
-        pdfUrl: pdfUrl || null,
-        status: (editorialStatus as EditorialStatus) ?? "published",
-        documentsRequired: Array.isArray(body.documentsRequired)
-          ? body.documentsRequired.filter(Boolean)
-          : [],
+        id, collegeId, sessionId, title, type,
+        summary, officialUrl, pdfUrl, status, documentsRequired,
         publishedAt: mapped.publishedAt ?? new Date(),
         dates: { create: mapped.dates },
       },
@@ -139,6 +167,9 @@ export async function POST(req: NextRequest) {
         adminEmail: admin.email,
       },
     });
+
+    // Tell the college's followers after the response has been sent.
+    if (status === "published") after(() => notifyFollowers(notice.id));
 
     return NextResponse.json(notice, { status: 201 });
   } catch (error) {

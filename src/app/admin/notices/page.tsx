@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Edit, Trash2, Loader2, Search } from "lucide-react"
+import { NoticeHealth } from "./NoticeHealth"
 
 interface Notice {
   id: string
@@ -98,6 +99,8 @@ export default function NoticesPage() {
           Add Notice
         </Link>
       </div>
+
+      <NoticeHealth />
 
       <div className="relative mb-4">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

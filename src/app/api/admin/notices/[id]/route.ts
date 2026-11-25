@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, EditorialStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { after } from "next/server";
+import { notifyFollowers } from "@/lib/services/notice-fanout";
+import { cleanTitle, cleanSummary, cleanOptionalUrl, checkDateOrder } from "@/lib/notice-validation";
 
 // PATCH accepts a partial allowlist of scalar fields and replaces the
 // structured NoticeDate rows wholesale. There is no writable
@@ -63,12 +66,47 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const body = await req.json();
 
-    const data: Prisma.NoticeUpdateInput = {};
+    const before = await prisma.notice.findUnique({
+      where: { id },
+      select: { status: true, publishedAt: true },
+    });
+    if (!before) return NextResponse.json({ error: "Notice not found" }, { status: 404 });
 
-    if (body.title !== undefined) data.title = body.title;
-    if (body.summary !== undefined) data.summary = body.summary || null;
-    if (body.officialUrl !== undefined) data.officialUrl = body.officialUrl || null;
-    if (body.pdfUrl !== undefined) data.pdfUrl = body.pdfUrl || null;
+    const data: Prisma.NoticeUpdateInput = {};
+    let replacementDates: { kind: string; label: string; date: Date }[] | null = null;
+    let lastDate: Date | null | undefined; // undefined = leave alone, null = remove
+
+    // 1. Validate everything first, so a bad request never leaves the notice half-changed.
+    try {
+      if (body.title !== undefined) data.title = cleanTitle(body.title);
+      if (body.summary !== undefined) data.summary = cleanSummary(body.summary);
+      if (body.officialUrl !== undefined) data.officialUrl = cleanOptionalUrl(body.officialUrl, "The official notice link");
+      if (body.pdfUrl !== undefined) data.pdfUrl = cleanOptionalUrl(body.pdfUrl, "The PDF link");
+      if (body.dates !== undefined) {
+        if (!Array.isArray(body.dates)) throw new Error("dates must be an array");
+        replacementDates = mapDates(body.dates);
+      }
+      if (body.lastDate !== undefined) {
+        if (body.lastDate === null || body.lastDate === "") lastDate = null;
+        else {
+          lastDate = new Date(body.lastDate);
+          if (Number.isNaN(lastDate.getTime())) throw new Error("Invalid lastDate");
+        }
+      }
+      if (body.publishedDate !== undefined) {
+        const d = new Date(body.publishedDate);
+        if (Number.isNaN(d.getTime())) throw new Error("Invalid publishedDate");
+        data.publishedAt = d;
+      }
+      const published = (data.publishedAt as Date | undefined) ?? before.publishedAt;
+      const deadline =
+        lastDate ??
+        replacementDates?.filter((d) => d.kind === "deadline").map((d) => d.date).sort((x, y) => y.getTime() - x.getTime())[0] ??
+        null;
+      checkDateOrder(published, deadline);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
     if (body.type !== undefined) {
       if (!NOTICE_TYPES.has(body.type)) {
         return NextResponse.json({ error: `Invalid notice type: ${body.type}` }, { status: 400 });
@@ -77,10 +115,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     if (body.editorialStatus !== undefined) {
       if (!EDITORIAL.has(body.editorialStatus)) {
-        return NextResponse.json(
-          { error: `Invalid editorial status: ${body.editorialStatus}` },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: `Invalid editorial status: ${body.editorialStatus}` }, { status: 400 });
       }
       data.status = body.editorialStatus;
     }
@@ -89,50 +124,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!college) return NextResponse.json({ error: "College not found" }, { status: 404 });
       data.college = { connect: { id: body.collegeId } };
     }
-    if (body.publishedDate !== undefined) {
-      const d = new Date(body.publishedDate);
-      if (Number.isNaN(d.getTime())) {
-        return NextResponse.json({ error: "Invalid publishedDate" }, { status: 400 });
-      }
-      data.publishedAt = d;
-    }
-    if (body.dates !== undefined) {
-      if (!Array.isArray(body.dates)) {
-        return NextResponse.json({ error: "dates must be an array" }, { status: 400 });
-      }
-      let mapped;
-      try {
-        mapped = mapDates(body.dates);
-      } catch (e) {
-        return NextResponse.json({ error: (e as Error).message }, { status: 400 });
-      }
-      // Wholesale replacement runs BEFORE lastDate handling so a legacy-form
-      // "Last Date" row sent alongside `dates` survives this step.
-      await prisma.noticeDate.deleteMany({ where: { noticeId: id } });
-      if (mapped.length) {
-        await prisma.noticeDate.createMany({
-          data: mapped.map((d) => ({ ...d, noticeId: id })),
-        });
-      }
-    }
-    if (body.lastDate !== undefined) {
-      // Delete-then-create: POST may have created the row with a cuid, so an
-      // id-based upsert would silently duplicate the "Last Date" deadline.
-      await prisma.noticeDate.deleteMany({
-        where: { noticeId: id, kind: "deadline", label: "Last Date" },
-      });
-      if (body.lastDate !== null && body.lastDate !== "") {
-        const d = new Date(body.lastDate);
-        if (Number.isNaN(d.getTime())) {
-          return NextResponse.json({ error: "Invalid lastDate" }, { status: 400 });
-        }
-        await prisma.noticeDate.create({
-          data: { noticeId: id, kind: "deadline", label: "Last Date", date: d },
-        });
-      }
-    }
 
-    const notice = await prisma.notice.update({ where: { id }, data });
+    // 2. Apply all changes together: either everything is saved or nothing is.
+    const notice = await prisma.$transaction(async (tx) => {
+      if (replacementDates) {
+        await tx.noticeDate.deleteMany({ where: { noticeId: id } });
+        if (replacementDates.length) {
+          await tx.noticeDate.createMany({ data: replacementDates.map((d) => ({ ...d, noticeId: id })) });
+        }
+      }
+      if (lastDate !== undefined) {
+        await tx.noticeDate.deleteMany({ where: { noticeId: id, kind: "deadline", label: "Last Date" } });
+        if (lastDate !== null) {
+          await tx.noticeDate.create({ data: { noticeId: id, kind: "deadline", label: "Last Date", date: lastDate } });
+        }
+      }
+      return tx.notice.update({ where: { id }, data });
+    });
 
     await prisma.adminLog.create({
       data: {
@@ -141,6 +149,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         adminEmail: admin.email,
       },
     });
+
+    // A notice that has just become published is announced to followers.
+    if (before.status !== "published" && notice.status === "published") after(() => notifyFollowers(notice.id));
 
     return NextResponse.json(notice);
   } catch (error) {
