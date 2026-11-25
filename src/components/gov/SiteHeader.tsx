@@ -15,7 +15,7 @@ export function SiteHeader() {
   const [spaceOpen, setSpaceOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [q, setQ] = useState("");
-  const spaceRef = useRef<HTMLDivElement>(null);
+  const spaceRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => { setOpen(false); setSpaceOpen(false); }, [pathname]);
 

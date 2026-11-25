@@ -6,7 +6,7 @@
  *    An admin confirms each one in Admin > Verification.
  * Idempotent. Usage: npx tsx scripts/apply-verified-facts.ts [--dry-run]
  */
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { researched, corrections, RESEARCH_DATE } from "../src/data/verified-facts";
 
 const DRY = process.argv.includes("--dry-run");
@@ -32,7 +32,11 @@ async function main() {
     const current = (row as unknown as Record<string, unknown>)[c.field];
     if (current !== c.from) { log(`correction ${c.collegeId}.${c.field}: current value differs from expected, skipped`); continue; }
     log(`correction ${c.collegeId}.${c.field}: "${c.from}" -> ${c.to === null ? "empty" : `"${c.to}"`}`);
-    if (!DRY) await prisma.college.update({ where: { id: c.collegeId }, data: { [c.field]: c.to } });
+    if (!DRY) {
+      const data: Prisma.CollegeUpdateInput = {};
+      (data as Record<string, unknown>)[c.field] = c.to;
+      await prisma.college.update({ where: { id: c.collegeId }, data });
+    }
   }
 
   for (const r of researched) {
