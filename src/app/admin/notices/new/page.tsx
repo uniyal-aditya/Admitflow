@@ -177,8 +177,6 @@ export default function NewNoticePage() {
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {title && (
-            )}
           </div>
 
           <div className="relative">

@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     let title: string, summary: string | null, officialUrl: string | null, pdfUrl: string | null, documentsRequired: string[];
-    let mapped;
+    let mapped: ReturnType<typeof mapNoticeDates>;
     try {
       title = cleanTitle(body.title);
       summary = cleanSummary(body.summary);
